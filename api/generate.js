@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '未知';
 
-    // ---- 1. 先记录日志（无论是否被限流） ----
+        // ---- 记录日志 ----
     const logEntry = {
         time: new Date().toISOString(),
         ip,
@@ -24,11 +24,10 @@ export default async function handler(req, res) {
         const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2, 8)}`;
         await kv.set(logKey, JSON.stringify(logEntry));
         await kv.expire(logKey, 60 * 60 * 24 * 30);
-        console.log('✅ 日志已写入:', logKey);
+        console.log('✅ 日志已写入', logKey);
     } catch (e) {
         console.error('❌ 日志写入失败:', e);
     }
-
     // ---- 2. 检查是否被禁用 ----
     try {
         const banned = await kv.get('config:banned_ips');
