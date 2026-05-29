@@ -1,3 +1,5 @@
+import { kv } from '@vercel/kv';
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: '只支持POST请求' });
@@ -8,10 +10,53 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '请选择写作风格' });
     }
 
-    // 民宿的真实信息（已融合你所有的细节）
+    // 获取 IP
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '未知';
+
+    // ---- 检查是否被禁用 ----
+    const banned = await kv.get('config:banned_ips');
+    if (banned && Array.isArray(banned) && banned.includes(ip)) {
+        return res.status(403).json({ error: '您的账号已被限制使用，如有疑问请联系民宿管家。' });
+    }
+
+    // ---- 检查每日配额 ----
+    const config = await kv.get('config:rate_limit');
+    const defaultLimit = config?.defaultLimit || 5;
+    const unlimitedIPs = config?.unlimitedIPs || [];
+    const customLimits = config?.customLimits || {};
+
+    if (!unlimitedIPs.includes(ip)) {
+        const limit = customLimits[ip] || defaultLimit;
+        const today = new Date().toISOString().slice(0, 10);
+        const dailyKey = `daily:${today}:${ip}`;
+        let used = await kv.get(dailyKey);
+        if (used === null || used === undefined) used = 0;
+        if (used >= limit) {
+            return res.status(429).json({ error: `今日生成次数已达上限（${limit}次），请明天再来。` });
+        }
+        await kv.incr(dailyKey);
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const ttlSeconds = Math.floor((tomorrow.getTime() - now.getTime()) / 1000) + 60;
+        await kv.expire(dailyKey, ttlSeconds);
+    }
+
+    // ---- 记录日志 ----
+    const logEntry = {
+        time: new Date().toISOString(),
+        ip,
+        style,
+        prompt: prompt || '(无补充)',
+        userAgent: req.headers['user-agent']?.substring(0, 100) || ''
+    };
+    const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2, 8)}`;
+    await kv.set(logKey, JSON.stringify(logEntry));
+    await kv.expire(logKey, 60 * 60 * 24 * 30); // 保留30天
+
+    // ---- 民宿真实信息（全部保留）----
     const hotelFacts = `
     关于霞浦县山予海民宿的真实背景（请在写作中自然融入，不要生硬罗列，像自己亲身经历一样带出来）：
-    
+
     位置与交通：
     - 民宿位于霞浦东线中间位置，闹中取静，地理位置绝佳，去哪都方便。
     - 距离三沙镇吃饭性价比最高的一条街约1公里，开车3分钟左右。
@@ -22,18 +67,18 @@ export default async function handler(req, res) {
     - 距离霞浦县城约30分钟车程。
     - 距离高罗沙滩、大京约1小时车程。
     - 距离下尾岛约1个半小时车程。
-    
+
     房间与景观：
     - 所有房间都是180度海景，真正的无敌海景，躺在床上就能看海。
     - 顶楼露台和一楼吧台拍照打卡绝了，非常出片，傍晚可以安静地吹晚风看落日。
-    
+
     服务与老板：
-    - 民宿老板是一个帅小伙，非常热情，入住会主动提供霞浦旅游攻略。
+    - 民宿老板是一个年轻的帅小伙，非常热情，入住会主动提供霞浦旅游攻略。
     - 提供赶海工具，还会帮忙查看当天的赶海时间。
     - 如果没有开车过来，老板会帮忙安排包车师傅，价格很划算。
     - 民宿大门口就有一整排共享电动车可以租借，出行非常方便。
     - 早餐是老板亲手准备的，很好吃，很多客人专门夸。
-    
+
     请在写作中根据所选风格，自然地挑几个点展开，让读者觉得你是真实住过的客人，不是复制粘贴的广告。
     `;
 
@@ -46,10 +91,7 @@ export default async function handler(req, res) {
     };
 
     const systemContent = hotelFacts + '\n\n' + (styleGuides[style] || "请为「霞浦县山予海民宿」写一篇热情的小红书好评，带emoji和话题标签。");
-
-    const userContent = prompt 
-        ? `请按上面要求写好评，并注意补充以下要点：${prompt}`
-        : "请直接生成好评文案";
+    const userContent = prompt ? `请按上面要求写好评，并注意补充以下要点：${prompt}` : "请直接生成好评文案";
 
     try {
         const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -67,7 +109,6 @@ export default async function handler(req, res) {
                 temperature: 0.9
             })
         });
-
         const data = await response.json();
         res.status(200).json({ result: data.choices[0].message.content });
     } catch (err) {
