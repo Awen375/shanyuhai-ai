@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>山予海民宿 · AI好评助手</title>
+    <title>山予海民宿 · AI文案助手</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
 
@@ -146,6 +146,7 @@
         textarea {
             height: 90px;
             resize: vertical;
+            background-image: none;
         }
         select:focus, textarea:focus {
             border-color: #1e90ff;
@@ -170,6 +171,12 @@
             position: relative;
             overflow: hidden;
         }
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 5px 15px rgba(15, 76, 129, 0.2);
+        }
         button::after {
             content: '';
             position: absolute;
@@ -181,14 +188,14 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
-        button:hover {
+        button:hover:not(:disabled) {
             transform: translateY(-3px);
             box-shadow: 0 15px 30px rgba(15, 76, 129, 0.45);
         }
-        button:hover::after {
+        button:hover:not(:disabled)::after {
             opacity: 1;
         }
-        button:active {
+        button:active:not(:disabled) {
             transform: translateY(0);
         }
 
@@ -247,10 +254,10 @@
     <div class="container">
         <div class="header">
             <div class="logo-icon">🌊</div>
-            <h1>山予海民宿</h1>
+            <h1>小红书文案助手</h1>
             <div class="subtitle">
-                ✨ AI好评助手
-                <span>霞浦·山予海</span>
+                ✨ AI文案助手
+                <span>山予海AI大模型</span>
             </div>
         </div>
 
@@ -270,20 +277,25 @@
             <textarea id="prompt" placeholder="例如：强调海景日出、步行到海滩3分钟、亲子房..."></textarea>
         </div>
 
-        <button onclick="generate()">🌊 生成民宿好评</button>
+        <button id="generateBtn" onclick="generate()">🌊 生成小红书文案</button>
 
         <div id="result" class="result-box"></div>
-        <div class="footer">🌿 每一条好评，都是山海的回响</div>
+        <div class="footer">本程序由，山予海AI大模型技术团队提供</div>
     </div>
 
     <script>
         async function generate() {
+            const btn = document.getElementById('generateBtn');
             const style = document.getElementById('styleSelect').value;
             const prompt = document.getElementById('prompt').value.trim();
             const resultBox = document.getElementById('result');
 
+            // 按钮置为不可点击，并显示“正在生成中...”
+            btn.disabled = true;
+            btn.innerText = '⏳ 正在生成中...';
+
             resultBox.classList.add('show');
-            resultBox.innerText = '⏳ 山予海正在为您书写...';
+            resultBox.innerText = '⏳ 山予海AI正在为您书写...';
             resultBox.style.color = '#1e3b4a';
 
             try {
@@ -301,9 +313,15 @@
             } catch (err) {
                 resultBox.innerText = '❌ ' + err.message;
                 resultBox.style.color = '#c44536';
+            } finally {
+                // 无论成功或失败，都恢复按钮状态
+                btn.disabled = false;
+                btn.innerText = '🌊 生成小红书文案';
             }
         }
     </script>
 
+</body>
+</html>
 </body>
 </html>
