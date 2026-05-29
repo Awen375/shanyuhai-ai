@@ -205,16 +205,15 @@
                 return;
             }
             tbody.innerHTML = '';
-            if (data.records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4">暂无记录</td></tr>';
-                return;
-            }
-            data.records.forEach(r => {
-                const time = new Date(r.time).toLocaleString('zh-CN');
-                const row = `<tr><td>${time}</td><td>${r.ip}</td><td>${r.style}</td><td>${r.prompt}</td></tr>`;
-                tbody.innerHTML += row;
-            });
-        }
+            if (!data.records || data.records.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4">暂无记录</td></tr>';
+    return;
+}
+data.records.forEach(r => {
+    const time = new Date(r.time).toLocaleString('zh-CN');
+    const row = `<tr><td>${time}</td><td>${r.ip}</td><td>${r.style}</td><td>${r.prompt}</td></tr>`;
+    tbody.innerHTML += row;
+});
     </script>
 </body>
 </html>
