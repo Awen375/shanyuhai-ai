@@ -14,46 +14,51 @@ export default async function handler(req, res) {
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '未知';
 
     // ---- 检查是否被禁用 ----
-    const banned = await kv.get('config:banned_ips');
-    if (banned && Array.isArray(banned) && banned.includes(ip)) {
-        return res.status(403).json({ error: '您的账号已被限制使用，如有疑问请联系民宿管家。' });
-    }
-
-    // ---- 检查每日配额 ----
-    const config = await kv.get('config:rate_limit');
-    const defaultLimit = config?.defaultLimit || 5;
-    const unlimitedIPs = config?.unlimitedIPs || [];
-    const customLimits = config?.customLimits || {};
-
-    if (!unlimitedIPs.includes(ip)) {
-        const limit = customLimits[ip] || defaultLimit;
-        const today = new Date().toISOString().slice(0, 10);
-        const dailyKey = `daily:${today}:${ip}`;
-        let used = await kv.get(dailyKey);
-        if (used === null || used === undefined) used = 0;
-        if (used >= limit) {
-            return res.status(429).json({ error: `今日生成次数已达上限（${limit}次），请明天再来。` });
+    try {
+        const banned = await kv.get('config:banned_ips');
+        if (banned && Array.isArray(banned) && banned.includes(ip)) {
+            return res.status(403).json({ error: '您的账号已被限制使用，如有疑问请联系AI管理员。' });
         }
-        await kv.incr(dailyKey);
-        const now = new Date();
-        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-        const ttlSeconds = Math.floor((tomorrow.getTime() - now.getTime()) / 1000) + 60;
-        await kv.expire(dailyKey, ttlSeconds);
+
+        // ---- 检查每日配额 ----
+        const config = await kv.get('config:rate_limit');
+        const defaultLimit = config?.defaultLimit || 5;
+        const unlimitedIPs = config?.unlimitedIPs || [];
+        const customLimits = config?.customLimits || {};
+
+        if (!unlimitedIPs.includes(ip)) {
+            const limit = customLimits[ip] || defaultLimit;
+            const today = new Date().toISOString().slice(0, 10);
+            const dailyKey = `daily:${today}:${ip}`;
+            let used = await kv.get(dailyKey);
+            if (used === null || used === undefined) used = 0;
+            if (used >= limit) {
+                return res.status(429).json({ error: `今日生成次数已达上限（${limit}次），请明天再试。` });
+            }
+            await kv.incr(dailyKey);
+            const now = new Date();
+            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+            const ttlSeconds = Math.floor((tomorrow.getTime() - now.getTime()) / 1000) + 60;
+            await kv.expire(dailyKey, ttlSeconds);
+        }
+
+        // ---- 记录日志 ----
+        const logEntry = {
+            time: new Date().toISOString(),
+            ip,
+            style,
+            prompt: prompt || '(无补充)',
+            userAgent: req.headers['user-agent']?.substring(0, 100) || ''
+        };
+        const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2, 8)}`;
+        await kv.set(logKey, JSON.stringify(logEntry));
+        await kv.expire(logKey, 60 * 60 * 24 * 30);
+    } catch (kvError) {
+        // KV 操作失败不影响生成，但记录一下
+        console.error('KV error:', kvError);
     }
 
-    // ---- 记录日志 ----
-    const logEntry = {
-        time: new Date().toISOString(),
-        ip,
-        style,
-        prompt: prompt || '(无补充)',
-        userAgent: req.headers['user-agent']?.substring(0, 100) || ''
-    };
-    const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2, 8)}`;
-    await kv.set(logKey, JSON.stringify(logEntry));
-    await kv.expire(logKey, 60 * 60 * 24 * 30); // 保留30天
-
-    // ---- 民宿真实信息 ----
+    // ---- 民宿信息 ----
     const hotelFacts = `
     关于霞浦县山予海民宿的真实背景（请在写作中自然融入，不要生硬罗列，像自己亲身经历一样带出来）：
 
@@ -109,9 +114,35 @@ export default async function handler(req, res) {
                 temperature: 0.9
             })
         });
-        const data = await response.json();
+
+        // 检查响应状态
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('DeepSeek API error:', response.status, errorText);
+            return res.status(502).json({ 
+                error: `AI服务暂时不可用（${response.status}），请稍后重试或联系管理员。` 
+            });
+        }
+
+        // 安全解析 JSON
+        let data;
+        try {
+            data = await response.json();
+        } catch (parseError) {
+            const rawText = await response.text();
+            console.error('JSON parse error, raw response:', rawText.substring(0, 200));
+            return res.status(502).json({ 
+                error: 'AI返回了异常数据，请稍后重试。' 
+            });
+        }
+
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            return res.status(502).json({ error: 'AI返回数据格式异常，请稍后重试。' });
+        }
+
         res.status(200).json({ result: data.choices[0].message.content });
     } catch (err) {
-        res.status(500).json({ error: 'AI生成失败，请稍后重试' });
+        console.error('Generate error:', err);
+        res.status(500).json({ error: '网络请求失败，请检查网络或稍后重试。' });
     }
 }
