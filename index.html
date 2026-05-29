@@ -73,7 +73,7 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 8px; letter-spacing: 1px;
-            cursor: pointer; user-select: none; /* 隐藏入口 */
+            cursor: pointer; user-select: none;
         }
 
         .subtitle {
@@ -263,10 +263,9 @@
         });
 
         function checkAdminPass() {
-            const pass = document.getElementById('zjm1314520').value;
-            // ⚠️ 请把此密码改成你自己的强密码
-            if (pass === 'shanyuhai2024') {
-                window.location.href = '/admin.html';
+            const pass = document.getElementById('adminPassInput').value;
+            if (pass === 'zjm1314520') {
+                window.open('/admin.html', '_self');
             } else {
                 alert('密码错误');
             }
