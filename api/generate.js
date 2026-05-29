@@ -53,7 +53,7 @@ export default async function handler(req, res) {
     await kv.set(logKey, JSON.stringify(logEntry));
     await kv.expire(logKey, 60 * 60 * 24 * 30); // 保留30天
 
-    // ---- 民宿真实信息（全部保留）----
+    // ---- 民宿真实信息 ----
     const hotelFacts = `
     关于霞浦县山予海民宿的真实背景（请在写作中自然融入，不要生硬罗列，像自己亲身经历一样带出来）：
 
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
     - 顶楼露台和一楼吧台拍照打卡绝了，非常出片，傍晚可以安静地吹晚风看落日。
 
     服务与老板：
-    - 民宿老板是一个年轻的帅小伙，非常热情，入住会主动提供霞浦旅游攻略。
+    - 民宿老板是一对年轻夫妇，非常热情，入住会主动提供霞浦旅游攻略。
     - 提供赶海工具，还会帮忙查看当天的赶海时间。
     - 如果没有开车过来，老板会帮忙安排包车师傅，价格很划算。
     - 民宿大门口就有一整排共享电动车可以租借，出行非常方便。
