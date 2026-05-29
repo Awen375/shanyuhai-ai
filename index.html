@@ -1,28 +1,142 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>山予海AI小红书文案</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山予海民宿 · 好评生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0f4c81 0%, #1e90ff 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            padding: 40px 30px;
+            max-width: 520px;
+            width: 100%;
+        }
+        .logo { font-size: 48px; text-align: center; margin-bottom: 5px; }
+        h1 { text-align: center; color: #0f4c81; font-size: 26px; margin-bottom: 6px; }
+        .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 24px; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-weight: 600; color: #333; margin-bottom: 6px; font-size: 14px; }
+        select, textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 14px;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s;
+            font-family: inherit;
+            background: #fafafa;
+        }
+        select:focus, textarea:focus {
+            border-color: #1e90ff;
+            box-shadow: 0 0 0 4px rgba(30,144,255,0.1);
+            background: white;
+        }
+        textarea { height: 90px; resize: vertical; }
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #1e90ff 0%, #0f4c81 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 20px 0 16px;
+            transition: all 0.3s;
+            box-shadow: 0 6px 20px rgba(15,76,129,0.3);
+            letter-spacing: 1px;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(15,76,129,0.4); }
+        button:active { transform: translateY(0); }
+        .result-box {
+            background: #f0f8ff;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: left;
+            min-height: 80px;
+            color: #333;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border-left: 4px solid #1e90ff;
+            display: none;
+        }
+        .result-box.show { display: block; }
+        .footer { text-align: center; margin-top: 18px; font-size: 12px; color: #aaa; }
+        @media (max-width: 480px) {
+            .container { padding: 28px 18px; }
+            h1 { font-size: 22px; }
+        }
+    </style>
 </head>
-<body style="max-width:500px;margin:50px auto;font-family:sans-serif">
-    <h2>✍️ 输入你的要求</h2>
-    <textarea id="prompt" rows="3" placeholder="例如：例如：推荐一款东壁村的网红民宿山予海，强调180度海景一览无余。" style="width:100%"></textarea>
-    <br>
-    <button onclick="generate()">生成文案</button>
-    <div id="result" style="margin-top:20px;background:#f5f5f5;padding:15px;white-space:pre-wrap;"></div>
+<body>
+    <div class="container">
+        <div class="logo">🏡</div>
+        <h1>山予海民宿 · 好评生成器</h1>
+        <p class="subtitle">🌊 霞浦县山予海民宿专属，一键生成不同风格好评</p>
+
+        <div class="form-group">
+            <label>✍️ 写作风格</label>
+            <select id="styleSelect">
+                <option value="情绪共鸣型">情绪共鸣型 - 打动人心，引发情感共鸣</option>
+                <option value="宝藏发现型">宝藏发现型 - 像发现宝藏一样惊喜</option>
+                <option value="氛围描绘型">氛围描绘型 - 刻画环境与氛围，身临其境</option>
+                <option value="干货整理型">干货整理型 - 列出实用信息，条理清晰</option>
+                <option value="攻略型">攻略型 - 详细的游玩与住宿攻略</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>💬 补充要点（可选）</label>
+            <textarea id="prompt" placeholder="比如：强调海景日出、免费接送、亲子友好...（不填也能生成）"></textarea>
+        </div>
+
+        <button onclick="generate()">✨ 生成好评文案</button>
+
+        <div id="result" class="result-box"></div>
+        <div class="footer">围绕霞浦县山予海民宿 · 让好评自带感染力</div>
+    </div>
+
     <script>
         async function generate() {
-            const p = document.getElementById('prompt').value;
-            if(!p) return alert('请输入要求');
-            document.getElementById('result').innerText = '正在生成...';
-            const res = await fetch('/api/generate', {
-                method: 'POST',
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({prompt: p})
-            });
-            const data = await res.json();
-            document.getElementById('result').innerText = data.result || data.error;
+            const style = document.getElementById('styleSelect').value;
+            const prompt = document.getElementById('prompt').value.trim();
+            const resultBox = document.getElementById('result');
+
+            resultBox.classList.add('show');
+            resultBox.innerText = '⏳ 正在为你撰写 ' + style + ' 文案...';
+
+            try {
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, style })
+                });
+                const data = await res.json();
+                if (data.result) {
+                    resultBox.innerText = data.result;
+                    resultBox.style.color = '#333';
+                } else {
+                    throw new Error(data.error || '生成失败');
+                }
+            } catch (err) {
+                resultBox.innerText = '❌ 生成失败：' + err.message;
+                resultBox.style.color = '#e74c3c';
+            }
         }
     </script>
 </body>
