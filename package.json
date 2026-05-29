@@ -1,5 +1,9 @@
 {
-  "name": "xiaohongshu-ai",
+  "name": "shanyuhai-ai",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@vercel/kv": "^1.0.0"
+  }
 }
