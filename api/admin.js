@@ -2,7 +2,7 @@ import { kv } from '@vercel/kv';
 
 export default async function handler(req, res) {
     const token = req.headers['x-admin-token'];
-    const ADMIN_PASSWORD = 'zjm1314520'; // 改成你自己的密码
+    const ADMIN_PASSWORD = 'zjm1314520';
     if (token !== ADMIN_PASSWORD) {
         return res.status(403).json({ error: '禁止访问' });
     }
