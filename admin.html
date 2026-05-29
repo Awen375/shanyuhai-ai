@@ -7,10 +7,18 @@
         body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background: #f0f4f8; padding: 30px; }
         .container { max-width: 900px; margin: 0 auto; }
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        h2 { color: #0b4f6c; margin-top: 0; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { border-bottom: 1px solid #eee; padding: 10px 6px; text-align: left; }
         th { background: #f8fafc; }
-        button { padding: 8px 18px; background: #1e90ff; color: white; border: none; border-radius: 20px; cursor: pointer; margin-right: 8px; }
+        input, button { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        button { background: #1e90ff; color: white; border: none; cursor: pointer; border-radius: 20px; padding: 8px 18px; margin-right: 8px; }
+        button.danger { background: #e74c3c; }
+        .flex-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .label { font-weight: 600; min-width: 80px; }
+        .ip-list { max-height: 200px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 12px; padding: 10px; margin-top: 10px; }
+        .ip-tag { display: inline-block; background: #e8f4fd; padding: 4px 12px; border-radius: 20px; margin: 3px; font-size: 13px; }
+        .ip-tag button { background: none; border: none; color: #c0392b; cursor: pointer; padding: 0 4px; font-size: 16px; }
         .hidden { display: none; }
         #loginBox { max-width: 350px; margin: 100px auto; }
     </style>
@@ -24,8 +32,47 @@
     </div>
 
     <div id="mainPanel" class="container hidden">
-        <h1 style="color:#0b4f6c;">🌊 山予海后台</h1>
-        <button onclick="logout()" style="background:#ccc;color:#333;margin-bottom:20px;">退出</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h1 style="color:#0b4f6c;">🌊 山予海后台</h1>
+            <button onclick="logout()" style="background:#ccc;color:#333;">退出</button>
+        </div>
+
+        <!-- 配置区 -->
+        <div class="card">
+            <h2>⚙️ 生成限制设置</h2>
+            <div class="flex-row">
+                <span class="label">每日默认次数：</span>
+                <input type="number" id="defaultLimit" min="1" style="width:80px;">
+                <button onclick="saveConfig()">💾 保存设置</button>
+            </div>
+            <div style="margin-top:15px;">
+                <strong>🚫 禁用IP列表</strong>
+                <div id="bannedList" class="ip-list"></div>
+                <div class="flex-row" style="margin-top:8px;">
+                    <input type="text" id="banIpInput" placeholder="输入要禁用的IP地址">
+                    <button onclick="addBanIP()">禁用此IP</button>
+                </div>
+            </div>
+            <div style="margin-top:15px;">
+                <strong>🌟 不限制IP（白名单）</strong>
+                <div id="unlimitedList" class="ip-list"></div>
+                <div class="flex-row" style="margin-top:8px;">
+                    <input type="text" id="unlimitIpInput" placeholder="输入不限IP">
+                    <button onclick="addUnlimitedIP()">添加白名单</button>
+                </div>
+            </div>
+            <div style="margin-top:15px;">
+                <strong>🔢 自定义IP限额</strong>
+                <div id="customLimitList" class="ip-list"></div>
+                <div class="flex-row" style="margin-top:8px;">
+                    <input type="text" id="customIpInput" placeholder="IP">
+                    <input type="number" id="customLimitValue" placeholder="次数" min="1" style="width:70px;">
+                    <button onclick="setCustomLimit()">设置</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 记录区 -->
         <div class="card">
             <h2>📋 最近使用记录 <button onclick="loadRecords()" style="float:right;">🔄 刷新</button></h2>
             <table id="recordsTable">
@@ -37,21 +84,115 @@
 
     <script>
         const ADMIN_PASSWORD = 'zjm1314520';
+        let currentConfig = { rateConfig: { defaultLimit: 5, unlimitedIPs: [], customLimits: {} }, banned: [] };
+
         function login() {
             if (document.getElementById('password').value === ADMIN_PASSWORD) {
                 localStorage.setItem('admin_token', ADMIN_PASSWORD);
                 document.getElementById('loginBox').classList.add('hidden');
                 document.getElementById('mainPanel').classList.remove('hidden');
+                loadConfig();
                 loadRecords();
             } else {
                 document.getElementById('loginError').innerText = '密码错误';
             }
         }
-        function logout() { localStorage.removeItem('admin_token'); location.reload(); }
+
+        function logout() {
+            localStorage.removeItem('admin_token');
+            location.reload();
+        }
+
         if (localStorage.getItem('admin_token') === ADMIN_PASSWORD) {
             document.getElementById('loginBox').classList.add('hidden');
             document.getElementById('mainPanel').classList.remove('hidden');
+            loadConfig();
             loadRecords();
+        }
+
+        async function loadConfig() {
+            const res = await fetch('/api/admin/config', {
+                headers: { 'x-admin-token': localStorage.getItem('admin_token') }
+            });
+            const data = await res.json();
+            currentConfig = data;
+            document.getElementById('defaultLimit').value = data.rateConfig.defaultLimit;
+            renderIPLists(data.rateConfig, data.banned);
+        }
+
+        function renderIPLists(rateConfig, banned) {
+            const bannedDiv = document.getElementById('bannedList');
+            bannedDiv.innerHTML = banned.length ? banned.map(ip => `<span class="ip-tag">${ip} <button onclick="removeBanIP('${ip}')">×</button></span>`).join('') : '（无）';
+
+            const unlimitDiv = document.getElementById('unlimitedList');
+            unlimitDiv.innerHTML = rateConfig.unlimitedIPs.length ? rateConfig.unlimitedIPs.map(ip => `<span class="ip-tag">${ip} <button onclick="removeUnlimitedIP('${ip}')">×</button></span>`).join('') : '（无）';
+
+            const customDiv = document.getElementById('customLimitList');
+            const customEntries = Object.entries(rateConfig.customLimits || {});
+            customDiv.innerHTML = customEntries.length ? customEntries.map(([ip, limit]) => `<span class="ip-tag">${ip} (${limit}次) <button onclick="removeCustomLimit('${ip}')">×</button></span>`).join('') : '（无）';
+        }
+
+        async function saveConfig() {
+            currentConfig.rateConfig.defaultLimit = parseInt(document.getElementById('defaultLimit').value);
+            await fetch('/api/admin/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-token': localStorage.getItem('admin_token')
+                },
+                body: JSON.stringify(currentConfig)
+            });
+            alert('设置已保存');
+        }
+
+        async function addBanIP() {
+            const ip = document.getElementById('banIpInput').value.trim();
+            if (ip && !currentConfig.banned.includes(ip)) {
+                currentConfig.banned.push(ip);
+                await saveConfig();
+                renderIPLists(currentConfig.rateConfig, currentConfig.banned);
+            }
+            document.getElementById('banIpInput').value = '';
+        }
+
+        async function removeBanIP(ip) {
+            currentConfig.banned = currentConfig.banned.filter(i => i !== ip);
+            await saveConfig();
+            renderIPLists(currentConfig.rateConfig, currentConfig.banned);
+        }
+
+        async function addUnlimitedIP() {
+            const ip = document.getElementById('unlimitIpInput').value.trim();
+            if (ip && !currentConfig.rateConfig.unlimitedIPs.includes(ip)) {
+                currentConfig.rateConfig.unlimitedIPs.push(ip);
+                await saveConfig();
+                renderIPLists(currentConfig.rateConfig, currentConfig.banned);
+            }
+            document.getElementById('unlimitIpInput').value = '';
+        }
+
+        async function removeUnlimitedIP(ip) {
+            currentConfig.rateConfig.unlimitedIPs = currentConfig.rateConfig.unlimitedIPs.filter(i => i !== ip);
+            await saveConfig();
+            renderIPLists(currentConfig.rateConfig, currentConfig.banned);
+        }
+
+        async function setCustomLimit() {
+            const ip = document.getElementById('customIpInput').value.trim();
+            const limit = parseInt(document.getElementById('customLimitValue').value);
+            if (ip && limit > 0) {
+                currentConfig.rateConfig.customLimits[ip] = limit;
+                await saveConfig();
+                renderIPLists(currentConfig.rateConfig, currentConfig.banned);
+            }
+            document.getElementById('customIpInput').value = '';
+            document.getElementById('customLimitValue').value = '';
+        }
+
+        async function removeCustomLimit(ip) {
+            delete currentConfig.rateConfig.customLimits[ip];
+            await saveConfig();
+            renderIPLists(currentConfig.rateConfig, currentConfig.banned);
         }
 
         async function loadRecords() {
