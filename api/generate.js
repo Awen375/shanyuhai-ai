@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     try {
         const banned = await kv.get('config:banned_ips');
         if (banned && Array.isArray(banned) && banned.includes(ip)) {
-            return res.status(403).json({ error: '您的账号已被限制使用，如有疑问请联系民宿管家。' });
+            return res.status(403).json({ error: '您的账号已被限制使用，如有疑问请联系山予海AI开发团队申述。' });
         }
     } catch (kvError) {
         console.error('检查禁用状态失败:', kvError);
@@ -125,7 +125,7 @@ export default async function handler(req, res) {
             const errorText = await response.text();
             console.error('DeepSeek API error:', response.status, errorText);
             return res.status(502).json({
-                error: `AI服务暂时不可用（${response.status}），请稍后重试或联系管理员。`
+                error: `AI服务暂时不可用（${response.status}），请稍后重试或联系平台管理员。`
             });
         }
 
