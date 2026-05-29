@@ -10,17 +10,37 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '请选择写作风格' });
     }
 
-    // 获取 IP
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '未知';
 
-    // ---- 检查是否被禁用 ----
+    // ---- 1. 先记录日志（无论是否被限流） ----
+    const logEntry = {
+        time: new Date().toISOString(),
+        ip,
+        style,
+        prompt: prompt || '(无补充)',
+        userAgent: req.headers['user-agent']?.substring(0, 100) || ''
+    };
+    try {
+        const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2, 8)}`;
+        await kv.set(logKey, JSON.stringify(logEntry));
+        await kv.expire(logKey, 60 * 60 * 24 * 30);
+        console.log('✅ 日志已写入:', logKey);
+    } catch (e) {
+        console.error('❌ 日志写入失败:', e);
+    }
+
+    // ---- 2. 检查是否被禁用 ----
     try {
         const banned = await kv.get('config:banned_ips');
         if (banned && Array.isArray(banned) && banned.includes(ip)) {
-            return res.status(403).json({ error: '您的账号已被限制使用，如有疑问请联系AI管理员。' });
+            return res.status(403).json({ error: '您的账号已被限制使用，如有疑问请联系民宿管家。' });
         }
+    } catch (kvError) {
+        console.error('检查禁用状态失败:', kvError);
+    }
 
-        // ---- 检查每日配额 ----
+    // ---- 3. 检查每日配额 ----
+    try {
         const config = await kv.get('config:rate_limit');
         const defaultLimit = config?.defaultLimit || 5;
         const unlimitedIPs = config?.unlimitedIPs || [];
@@ -33,7 +53,7 @@ export default async function handler(req, res) {
             let used = await kv.get(dailyKey);
             if (used === null || used === undefined) used = 0;
             if (used >= limit) {
-                return res.status(429).json({ error: `今日生成次数已达上限（${limit}次），请明天再试。` });
+                return res.status(429).json({ error: `今日生成次数已达上限（${limit}次），请明天再来。` });
             }
             await kv.incr(dailyKey);
             const now = new Date();
@@ -41,24 +61,11 @@ export default async function handler(req, res) {
             const ttlSeconds = Math.floor((tomorrow.getTime() - now.getTime()) / 1000) + 60;
             await kv.expire(dailyKey, ttlSeconds);
         }
-
-        // ---- 记录日志 ----
-        const logEntry = {
-            time: new Date().toISOString(),
-            ip,
-            style,
-            prompt: prompt || '(无补充)',
-            userAgent: req.headers['user-agent']?.substring(0, 100) || ''
-        };
-        const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2, 8)}`;
-        await kv.set(logKey, JSON.stringify(logEntry));
-        await kv.expire(logKey, 60 * 60 * 24 * 30);
     } catch (kvError) {
-        // KV 操作失败不影响生成，但记录一下
-        console.error('KV error:', kvError);
+        console.error('检查配额失败:', kvError);
     }
 
-    // ---- 民宿信息 ----
+    // ---- 4. 民宿信息与风格 ----
     const hotelFacts = `
     关于霞浦县山予海民宿的真实背景（请在写作中自然融入，不要生硬罗列，像自己亲身经历一样带出来）：
 
@@ -78,13 +85,13 @@ export default async function handler(req, res) {
     - 顶楼露台和一楼吧台拍照打卡绝了，非常出片，傍晚可以安静地吹晚风看落日。
 
     服务与老板：
-    - 民宿老板是一个年轻的帅小伙，非常热情，入住会主动提供霞浦旅游攻略。
+    - 民宿老板是一对年轻夫妇，非常热情，入住会主动提供霞浦旅游攻略。
     - 提供赶海工具，还会帮忙查看当天的赶海时间。
     - 如果没有开车过来，老板会帮忙安排包车师傅，价格很划算。
     - 民宿大门口就有一整排共享电动车可以租借，出行非常方便。
-    - 早餐是老板的奶奶亲手准备的，奶奶做饭很好吃，很多客人专门夸。
+    - 早餐是老板亲手准备的，很好吃，很多客人专门夸。
 
-    请在写作中根据所选风格，自然地挑1-3个点展开，让读者觉得你是真实住过的客人，不是复制粘贴的广告。
+    请在写作中根据所选风格，自然地挑几个点展开，让读者觉得你是真实住过的客人，不是复制粘贴的广告。
     `;
 
     const styleGuides = {
@@ -115,24 +122,22 @@ export default async function handler(req, res) {
             })
         });
 
-        // 检查响应状态
         if (!response.ok) {
             const errorText = await response.text();
             console.error('DeepSeek API error:', response.status, errorText);
-            return res.status(502).json({ 
-                error: `AI服务暂时不可用（${response.status}），请稍后重试或联系管理员。` 
+            return res.status(502).json({
+                error: `AI服务暂时不可用（${response.status}），请稍后重试或联系管理员。`
             });
         }
 
-        // 安全解析 JSON
         let data;
         try {
             data = await response.json();
         } catch (parseError) {
             const rawText = await response.text();
             console.error('JSON parse error, raw response:', rawText.substring(0, 200));
-            return res.status(502).json({ 
-                error: 'AI返回了异常数据，请稍后重试。' 
+            return res.status(502).json({
+                error: 'AI返回了异常数据，请稍后重试。'
             });
         }
 
