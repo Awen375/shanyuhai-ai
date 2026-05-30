@@ -6,22 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background: #f0f4f8; padding: 30px; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
         h2 { color: #0b4f6c; margin-top: 0; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { border-bottom: 1px solid #eee; padding: 10px 6px; text-align: left; }
         th { background: #f8fafc; }
-        input, button { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
-        button { background: #1e90ff; color: white; border: none; cursor: pointer; border-radius: 20px; padding: 8px 18px; margin-right: 8px; }
+        input, button, select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+        button { background: #1e90ff; color: white; border: none; cursor: pointer; border-radius: 20px; padding: 8px 18px; margin-right: 6px; margin-bottom: 6px; }
         button.danger { background: #e74c3c; }
+        button.warning { background: #f39c12; }
+        button.success { background: #27ae60; }
         .flex-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
         .label { font-weight: 600; min-width: 80px; }
-        .ip-list { max-height: 200px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 12px; padding: 10px; margin-top: 10px; }
-        .ip-tag { display: inline-block; background: #e8f4fd; padding: 4px 12px; border-radius: 20px; margin: 3px; font-size: 13px; }
-        .ip-tag button { background: none; border: none; color: #c0392b; cursor: pointer; padding: 0 4px; font-size: 16px; }
         .hidden { display: none; }
         #loginBox { max-width: 350px; margin: 100px auto; }
+        .stat-box { background: #f0f8ff; border-radius: 12px; padding: 15px; margin: 15px 0; }
     </style>
 </head>
 <body>
@@ -49,47 +49,29 @@
                 <button onclick="addMerchant()">新增商家</button>
             </div>
             <table id="merchantTable">
-                <thead><tr><th>ID</th><th>名称</th><th>算力</th><th>操作</th></tr></thead>
+                <thead><tr><th>ID</th><th>名称</th><th>算力</th><th>状态</th><th>操作</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
 
-        <!-- 限流/封禁设置 -->
+        <!-- 商家使用统计查询 -->
         <div class="card">
-            <h2>⚙️ 生成限制设置</h2>
+            <h2>📊 商家使用统计</h2>
             <div class="flex-row">
-                <span class="label">每日默认次数：</span>
-                <input type="number" id="defaultLimit" min="1" style="width:80px;">
-                <button onclick="saveConfig()">💾 保存设置</button>
+                <span class="label">选择商家：</span>
+                <select id="statMerchantSelect">
+                    <option value="">-- 请先选择商家 --</option>
+                </select>
+                <span class="label">开始日期：</span>
+                <input type="date" id="statStart">
+                <span class="label">结束日期：</span>
+                <input type="date" id="statEnd">
+                <button onclick="queryStats()">查询</button>
             </div>
-            <div style="margin-top:15px;">
-                <strong>🚫 禁用IP列表</strong>
-                <div id="bannedList" class="ip-list"></div>
-                <div class="flex-row">
-                    <input type="text" id="banIpInput" placeholder="输入要禁用的IP">
-                    <button onclick="addBanIP()">禁用此IP</button>
-                </div>
-            </div>
-            <div style="margin-top:15px;">
-                <strong>🌟 不限制IP（白名单）</strong>
-                <div id="unlimitedList" class="ip-list"></div>
-                <div class="flex-row">
-                    <input type="text" id="unlimitIpInput" placeholder="输入不限IP">
-                    <button onclick="addUnlimitedIP()">添加白名单</button>
-                </div>
-            </div>
-            <div style="margin-top:15px;">
-                <strong>🔢 自定义IP限额</strong>
-                <div id="customLimitList" class="ip-list"></div>
-                <div class="flex-row">
-                    <input type="text" id="customIpInput" placeholder="IP">
-                    <input type="number" id="customLimitValue" placeholder="次数" min="1" style="width:70px;">
-                    <button onclick="setCustomLimit()">设置</button>
-                </div>
-            </div>
+            <div id="statResult" class="stat-box">请选择商家和日期范围后查询</div>
         </div>
 
-        <!-- 使用记录 -->
+        <!-- 使用记录总览 -->
         <div class="card">
             <h2>📋 最近使用记录 <button onclick="loadRecords()" style="float:right;">🔄 刷新</button></h2>
             <table id="recordsTable">
@@ -100,9 +82,10 @@
     </div>
 
     <script>
-        const ADMIN_PASSWORD = 'shanyuhai2024'; // ⚠️ 改成你自己的密码
-        let currentConfig = { rateConfig:{ defaultLimit:5, unlimitedIPs:[], customLimits:{} }, banned:[] };
+        const ADMIN_PASSWORD = 'zjm1314520';  // 超级密码
+        const token = () => localStorage.getItem('admin_token');
 
+        // 登录
         function login(){
             if(document.getElementById('password').value === ADMIN_PASSWORD) {
                 localStorage.setItem('admin_token', ADMIN_PASSWORD);
@@ -115,116 +98,133 @@
         }
         function logout(){ localStorage.removeItem('admin_token'); location.reload(); }
 
-        const token = () => localStorage.getItem('admin_token');
         if(token() === ADMIN_PASSWORD) {
             document.getElementById('loginBox').classList.add('hidden');
             document.getElementById('mainPanel').classList.remove('hidden');
             loadAll();
         }
 
-        async function loadAll(){ await loadConfig(); await loadMerchants(); await loadRecords(); }
+        async function loadAll() {
+            await loadMerchants();
+            await loadRecords();
+        }
 
-        // ===== 商家管理 =====
+        // ===== 商家列表 =====
         async function loadMerchants(){
-            const res = await fetch('/api/admin/merchants', { headers: {'x-admin-token': token()} });
+            const res = await fetch('/api/admin/merchants', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
             const tbody = document.querySelector('#merchantTable tbody');
             tbody.innerHTML = '';
+            // 填充统计下拉框
+            const statSelect = document.getElementById('statMerchantSelect');
+            statSelect.innerHTML = '<option value="">-- 选择商家 --</option>';
+
             data.merchants.forEach(m => {
+                const status = m.status === 'banned' ? '🚫已封' : '✅正常';
                 tbody.innerHTML += `<tr>
-                    <td>${m.id}</td><td>${m.name}</td><td>${m.balance}</td>
+                    <td>${m.id}</td>
+                    <td>${m.name || ''}</td>
+                    <td>${m.balance}</td>
+                    <td>${status}</td>
                     <td>
-                        <button onclick="updateMerchant('${m.id}')">更新</button>
-                        <button class="danger" onclick="deleteMerchant('${m.id}')">删除</button>
+                        <button onclick="rechargeMerchant('${m.id}')">💰充值</button>
+                        <button onclick="deleteMerchant('${m.id}')" class="danger">🗑删除</button>
+                        ${m.status === 'banned' 
+                            ? `<button onclick="toggleBan('${m.id}', false)" class="success">🔓解封</button>`
+                            : `<button onclick="toggleBan('${m.id}', true)" class="warning">🚫封号</button>`
+                        }
                     </td>
                 </tr>`;
+                statSelect.innerHTML += `<option value="${m.id}">${m.id} - ${m.name||''}</option>`;
             });
         }
+
+        // 新增商家
         async function addMerchant(){
             const id = document.getElementById('newMerchantId').value.trim();
             const name = document.getElementById('newMerchantName').value.trim();
             const password = document.getElementById('newMerchantPass').value;
             const balance = parseInt(document.getElementById('newMerchantBalance').value) || 100;
+            if(!id || !password) return alert('ID和密码必填');
             await fetch('/api/admin/merchants', {
                 method: 'POST',
                 headers: { 'Content-Type':'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id, name, password, balance })
             });
-            loadMerchants();
+            await loadMerchants();
         }
-        async function updateMerchant(id){
-            const newBalance = prompt('输入新算力余额：');
-            if(newBalance !== null) {
+
+        // 充值
+        async function rechargeMerchant(id){
+            const newBalance = prompt('输入新的算力余额（当前余额将被覆盖）：');
+            if(newBalance !== null && !isNaN(newBalance)) {
                 await fetch('/api/admin/merchants', {
                     method: 'PUT',
                     headers: { 'Content-Type':'application/json', 'x-admin-token': token() },
                     body: JSON.stringify({ id, balance: parseInt(newBalance) })
                 });
-                loadMerchants();
+                await loadMerchants();
             }
         }
+
+        // 删除
         async function deleteMerchant(id){
-            if(confirm('确定删除商家 ' + id + '？')) {
-                await fetch('/api/admin/merchants', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type':'application/json', 'x-admin-token': token() },
-                    body: JSON.stringify({ id })
-                });
-                loadMerchants();
+            if(!confirm('确定删除商家 ' + id + '？此操作不可恢复。')) return;
+            await fetch('/api/admin/merchants', {
+                method: 'DELETE',
+                headers: { 'Content-Type':'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id })
+            });
+            await loadMerchants();
+        }
+
+        // 封号/解封
+        async function toggleBan(id, ban){
+            const action = ban ? '封号' : '解封';
+            if(!confirm(`确定${action}商家 ${id} 吗？`)) return;
+            await fetch('/api/admin/merchants', {
+                method: 'PUT',
+                headers: { 'Content-Type':'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id, status: ban ? 'banned' : 'active' })
+            });
+            await loadMerchants();
+        }
+
+        // ===== 商家使用统计 =====
+        async function queryStats(){
+            const merchantId = document.getElementById('statMerchantSelect').value;
+            if(!merchantId) return alert('请选择商家');
+            const start = document.getElementById('statStart').value;
+            const end = document.getElementById('statEnd').value;
+            if(!start || !end) return alert('请选择起止日期');
+
+            const res = await fetch(`/api/admin/merchants?action=stats&merchant=${merchantId}&start=${start}&end=${end}`, {
+                headers: { 'x-admin-token': token() }
+            });
+            const data = await res.json();
+            if(res.ok) {
+                document.getElementById('statResult').innerHTML = `
+                    <p>📅 <b>${start} ~ ${end}</b></p>
+                    <p>🧮 总生成次数：<b>${data.total}</b></p>
+                    <h4>每日明细：</h4>
+                    <table><tr><th>日期</th><th>次数</th></tr>
+                    ${Object.entries(data.daily||{}).map(([date,count]) => `<tr><td>${date}</td><td>${count}</td></tr>`).join('')}
+                    </table>
+                `;
+            } else {
+                document.getElementById('statResult').innerText = '查询失败：' + data.error;
             }
         }
 
-        // ===== 配置管理 =====
-        async function loadConfig(){
-            const res = await fetch('/api/admin/config', { headers: {'x-admin-token': token()} });
-            const data = await res.json();
-            currentConfig = data;
-            document.getElementById('defaultLimit').value = data.rateConfig.defaultLimit;
-            renderIPLists(data.rateConfig, data.banned);
-        }
-        function renderIPLists(rateConfig, banned){
-            document.getElementById('bannedList').innerHTML = banned.length ? banned.map(ip=>`<span class="ip-tag">${ip} <button onclick="removeBanIP('${ip}')">×</button></span>`).join('') : '（无）';
-            document.getElementById('unlimitedList').innerHTML = rateConfig.unlimitedIPs.length ? rateConfig.unlimitedIPs.map(ip=>`<span class="ip-tag">${ip} <button onclick="removeUnlimitedIP('${ip}')">×</button></span>`).join('') : '（无）';
-            const custom = Object.entries(rateConfig.customLimits||{}).map(([ip,limit])=>`<span class="ip-tag">${ip} (${limit}次) <button onclick="removeCustomLimit('${ip}')">×</button></span>`).join('');
-            document.getElementById('customLimitList').innerHTML = custom || '（无）';
-        }
-        async function saveConfig(){
-            currentConfig.rateConfig.defaultLimit = parseInt(document.getElementById('defaultLimit').value);
-            await fetch('/api/admin/config', {
-                method: 'POST',
-                headers: { 'Content-Type':'application/json', 'x-admin-token': token() },
-                body: JSON.stringify(currentConfig)
-            });
-            alert('设置已保存');
-        }
-        async function addBanIP(){
-            const ip = document.getElementById('banIpInput').value.trim();
-            if(ip && !currentConfig.banned.includes(ip)) { currentConfig.banned.push(ip); await saveConfig(); renderIPLists(currentConfig.rateConfig, currentConfig.banned); }
-            document.getElementById('banIpInput').value = '';
-        }
-        async function removeBanIP(ip){ currentConfig.banned = currentConfig.banned.filter(i=>i!==ip); await saveConfig(); renderIPLists(currentConfig.rateConfig, currentConfig.banned); }
-        async function addUnlimitedIP(){
-            const ip = document.getElementById('unlimitIpInput').value.trim();
-            if(ip && !currentConfig.rateConfig.unlimitedIPs.includes(ip)) { currentConfig.rateConfig.unlimitedIPs.push(ip); await saveConfig(); renderIPLists(currentConfig.rateConfig, currentConfig.banned); }
-            document.getElementById('unlimitIpInput').value = '';
-        }
-        async function removeUnlimitedIP(ip){ currentConfig.rateConfig.unlimitedIPs = currentConfig.rateConfig.unlimitedIPs.filter(i=>i!==ip); await saveConfig(); renderIPLists(currentConfig.rateConfig, currentConfig.banned); }
-        async function setCustomLimit(){
-            const ip = document.getElementById('customIpInput').value.trim();
-            const limit = parseInt(document.getElementById('customLimitValue').value);
-            if(ip && limit>0) { currentConfig.rateConfig.customLimits[ip] = limit; await saveConfig(); renderIPLists(currentConfig.rateConfig, currentConfig.banned); }
-        }
-        async function removeCustomLimit(ip){ delete currentConfig.rateConfig.customLimits[ip]; await saveConfig(); renderIPLists(currentConfig.rateConfig, currentConfig.banned); }
-
-        // ===== 使用记录 =====
+        // ===== 全部日志 =====
         async function loadRecords(){
             const tbody = document.querySelector('#recordsTable tbody');
             tbody.innerHTML = '<tr><td colspan="5">加载中...</td></tr>';
-            const res = await fetch('/api/admin', { headers: {'x-admin-token': token()} });
+            const res = await fetch('/api/admin', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
             if(!res.ok) { tbody.innerHTML = `<tr><td colspan="5">错误: ${data.error}</td></tr>`; return; }
             tbody.innerHTML = '';
-            if(data.records.length===0) { tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>'; return; }
+            if(data.records.length === 0) { tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>'; return; }
             data.records.forEach(r => {
                 const time = new Date(r.time).toLocaleString('zh-CN');
                 tbody.innerHTML += `<tr><td>${time}</td><td>${r.ip||''}</td><td>${r.merchant||'无'}</td><td>${r.style}</td><td>${r.prompt||''}</td></tr>`;
