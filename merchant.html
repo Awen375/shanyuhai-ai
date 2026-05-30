@@ -14,8 +14,9 @@
         #qrImage { display: block; margin: 20px auto; max-width: 200px; }
         .hidden { display: none; }
         .open-link { color: #1e90ff; font-weight: 500; cursor: pointer; text-decoration: underline; }
-        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
-        .btn-row button { flex: 1; padding: 10px; font-size: 14px; }
+        .btn-row { display: flex; gap: 10px; margin: 10px 0; }
+        .btn-row button { flex: 1; padding: 10px; font-size: 14px; background: #3498db; }
+        .btn-row .recharge-btn { background: #27ae60; }
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999;
@@ -45,8 +46,8 @@
         <h2>🌊 山予海商家中心</h2>
         <div class="info">🧮 剩余算力：<strong id="balanceSpan"></strong></div>
         <div class="btn-row">
-            <button onclick="showFlow('consume')" style="background:#3498db;">📊 算力明细</button>
-            <button onclick="showFlow('recharge')" style="background:#27ae60;">💰 充值记录</button>
+            <button onclick="showFlow('consume')">📊 算力明细</button>
+            <button onclick="showFlow('recharge')" class="recharge-btn">💰 充值记录</button>
         </div>
         <p style="margin-top:15px;">专属推广二维码（客人扫码生成好评，每次消耗2算力）</p>
         <img id="qrImage" />
@@ -82,15 +83,15 @@
     <script>
         const API_BASE = '/api/merchant';
 
-        async function login(){
+        async function login() {
             const id = document.getElementById('merchantId').value.trim();
             const password = document.getElementById('password').value;
             const res = await fetch(`${API_BASE}/login`, {
-                method: 'POST', headers: {'Content-Type':'application/json'},
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, password })
             });
             const data = await res.json();
-            if(data.token) {
+            if (data.token) {
                 localStorage.setItem('merchant_token', data.token);
                 localStorage.setItem('merchant_id', id);
                 showDashboard();
@@ -99,17 +100,18 @@
             }
         }
 
-        async function showDashboard(){
+        async function showDashboard() {
             const token = localStorage.getItem('merchant_token');
             const id = localStorage.getItem('merchant_id');
             const res = await fetch(`${API_BASE}/info`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
-            if(data.id) {
+            if (data.id) {
                 document.getElementById('balanceSpan').innerText = data.balance;
-                // 生成含token的二维码链接
-                const url = `https://www.shanyh.top?merchant=${data.id}&token=${data.token_val}`;
+                // 生成包含 token 的二维码链接
+                const tokenVal = data.token_val || '';
+                const url = `https://www.shanyh.top?merchant=${data.id}&token=${tokenVal}`;
                 document.getElementById('qrUrl').innerText = url;
                 document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
                 document.getElementById('loginBox').classList.add('hidden');
@@ -120,22 +122,22 @@
             }
         }
 
-        async function refreshQR(){
+        async function refreshQR() {
             const token = localStorage.getItem('merchant_token');
             const res = await fetch(`${API_BASE}/refresh`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
-            if(data.success) {
+            if (data.success) {
                 alert('二维码已刷新，旧码立即失效');
-                showDashboard(); // 重新加载显示新码
+                showDashboard(); // 刷新显示
             } else {
                 alert('刷新失败：' + data.error);
             }
         }
 
-        async function showFlow(filterType){
+        async function showFlow(filterType) {
             const token = localStorage.getItem('merchant_token');
             const res = await fetch(`${API_BASE}/flow`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -144,7 +146,7 @@
             const tbody = document.getElementById('flowTableBody');
             tbody.innerHTML = '';
             const filtered = filterType ? data.flows.filter(f => f.type === filterType) : data.flows;
-            if(filtered.length === 0) {
+            if (filtered.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>';
             } else {
                 filtered.forEach(f => {
@@ -165,32 +167,32 @@
             document.getElementById('flowModal').style.display = 'flex';
         }
 
-        function logout(){
+        function logout() {
             localStorage.removeItem('merchant_token');
             localStorage.removeItem('merchant_id');
             location.reload();
         }
 
-        async function openContact(){
+        async function openContact() {
             document.getElementById('contactModal').style.display = 'flex';
             const res = await fetch('/api/admin/contact');
             const data = await res.json();
             const qrImg = document.getElementById('contactQrImage');
-            if(data.qrcode_url) {
+            if (data.qrcode_url) {
                 qrImg.src = data.qrcode_url;
                 document.getElementById('contactQrContainer').style.display = '';
             } else {
                 document.getElementById('contactQrContainer').style.display = 'none';
             }
             let infoHtml = '';
-            if(data.phone) infoHtml += `<p>📱 电话：${data.phone}</p>`;
-            if(data.wechat) infoHtml += `<p>💬 微信：${data.wechat}</p>`;
-            if(data.extra) infoHtml += `<p>${data.extra}</p>`;
-            if(!infoHtml) infoHtml = '<p>暂无联系方式</p>';
+            if (data.phone) infoHtml += `<p>📱 电话：${data.phone}</p>`;
+            if (data.wechat) infoHtml += `<p>💬 微信：${data.wechat}</p>`;
+            if (data.extra) infoHtml += `<p>${data.extra}</p>`;
+            if (!infoHtml) infoHtml = '<p>暂无联系方式</p>';
             document.getElementById('contactInfo').innerHTML = infoHtml;
         }
 
-        if(localStorage.getItem('merchant_token')) {
+        if (localStorage.getItem('merchant_token')) {
             document.getElementById('loginBox').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             showDashboard();
