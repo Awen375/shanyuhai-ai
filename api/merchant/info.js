@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     const merchant = await kv.get(`merchant:${id}`);
     if (!merchant || merchant.password !== password) return res.status(401).json({ error: '登录信息失效' });
 
-    // 读取商家自定义设置
+    // 读取设置
     const settings = await kv.get(`merchant:${id}:settings`) || {};
 
     res.status(200).json({
