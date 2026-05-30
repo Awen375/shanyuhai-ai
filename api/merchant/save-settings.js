@@ -18,13 +18,14 @@ export default async function handler(req, res) {
     const merchant = await kv.get(`merchant:${id}`);
     if (!merchant || merchant.password !== password) return res.status(401).json({ error: '登录信息失效' });
 
-    const { industry, keywords, product, extraNote } = req.body;
+    const { industry, keywords, product, extraNote, styles } = req.body;
 
     await kv.set(`merchant:${id}:settings`, {
         industry: industry || '',
         keywords: keywords || '',
         product: product || '',
-        extraNote: extraNote || ''
+        extraNote: extraNote || '',
+        styles: Array.isArray(styles) ? styles : []
     });
 
     res.status(200).json({ success: true });
