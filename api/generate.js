@@ -1,9 +1,39 @@
-import { Redis } from '@upstash/redis';
+// 使用 Upstash REST API 封装函数
+function redis() {
+  const baseUrl = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  return {
+    async get(key) {
+      const res = await fetch(`${baseUrl}/get/${key}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      return data.result;
+    },
+    async set(key, value) {
+      await fetch(`${baseUrl}/set/${key}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value })
+      });
+    },
+    async expire(key, seconds) {
+      await fetch(`${baseUrl}/expire/${key}/${seconds}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    },
+    async keys(pattern) {
+      const res = await fetch(`${baseUrl}/keys/${pattern}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      return data.result || [];
+    }
+  };
+}
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL,
-  token: process.env.KV_REST_API_TOKEN,
-});
+const r = redis();
 
 const defaultStyleGuides = {
     "情绪共鸣型": "你是感情细腻的体验者。用第一人称写小红书好评，抒发内心感动、放松与共鸣，带emoji和话题标签。",
@@ -50,7 +80,7 @@ export default async function handler(req, res) {
     }
 
     // 从 Redis 读取商家数据
-    const merchantStr = await redis.get(`merchant:${merchantId}`);
+    const merchantStr = await r.get(`merchant:${merchantId}`);
     const merchant = merchantStr ? JSON.parse(merchantStr) : null;
     if (!merchant) return res.status(400).json({ error: '无效商家' });
     if (merchant.status === 'banned') return res.status(403).json({ error: '该商家已被封禁' });
@@ -60,14 +90,13 @@ export default async function handler(req, res) {
     if (merchant.balance < 2) return res.status(402).json({ error: '商家算力不足' });
 
     // 读取商家自定义设置
-    const settingsStr = await redis.get(`merchant:${merchantId}:settings`);
+    const settingsStr = await r.get(`merchant:${merchantId}:settings`);
     const settings = settingsStr ? JSON.parse(settingsStr) : {};
 
     if (!settings.industry && !settings.product) {
         return res.status(400).json({ error: '该商家尚未设置行业和产品信息，请联系商家完善' });
     }
 
-    // 构建专属 prompt
     let facts = '你是一位专业的小红书好评写手。请为以下产品/服务写一篇好评：\n';
     if (settings.industry) facts += `行业：${settings.industry}\n`;
     if (settings.product) facts += `产品/服务名称：${settings.product}\n`;
@@ -75,23 +104,20 @@ export default async function handler(req, res) {
     if (settings.extraNote) facts += `补充信息：${settings.extraNote}\n`;
     facts += `\n请根据以上信息，生成一篇真诚、生动的小红书风格好评，包含emoji和话题标签。`;
 
-    // 扣除算力
     const userIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '未知';
     merchant.balance -= 2;
-    await redis.set(`merchant:${merchantId}`, JSON.stringify(merchant));
+    await r.set(`merchant:${merchantId}`, JSON.stringify(merchant));
 
-    // 记录消费流水
     const flowKey = `flow:${merchantId}:${Date.now()}`;
-    await redis.set(flowKey, JSON.stringify({
+    await r.set(flowKey, JSON.stringify({
         type: 'consume',
         amount: 2,
         balanceAfter: merchant.balance,
         time: new Date().toISOString(),
         note: `生成好评消耗 - 使用者IP: ${userIP}`
     }));
-    await redis.expire(flowKey, 60 * 60 * 24 * 30);
+    await r.expire(flowKey, 60 * 60 * 24 * 30);
 
-    // 日志
     const logEntry = {
         time: new Date().toISOString(),
         ip: userIP,
@@ -100,8 +126,8 @@ export default async function handler(req, res) {
         prompt: prompt || ''
     };
     const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2,8)}`;
-    await redis.set(logKey, JSON.stringify(logEntry));
-    await redis.expire(logKey, 60 * 60 * 24 * 30);
+    await r.set(logKey, JSON.stringify(logEntry));
+    await r.expire(logKey, 60 * 60 * 24 * 30);
 
     return generateContent(style, prompt, facts, res);
 }
