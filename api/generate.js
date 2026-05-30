@@ -58,7 +58,14 @@ export default async function handler(req, res) {
         if (merchant.balance < 2) return res.status(402).json({ error: '商家算力不足，生成失败。' });
         merchant.balance -= 2;
         await kv.set(`merchant:${merchantId}`, merchant);
-
+// 写入消费流水
+await kv.set(`flow:${merchantId}:${Date.now()}`, JSON.stringify({
+    type: 'consume',
+    amount: 2,
+    balanceAfter: merchant.balance,
+    time: new Date().toISOString(),
+    note: '生成好评消耗'
+}));
         // 写日志
         const log = {
             time: new Date().toISOString(),
