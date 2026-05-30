@@ -10,7 +10,13 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: '账号或密码错误' });
     }
 
-    // 简单token，生产环境建议jwt
+    // 如果没有 token_val，则生成一个
+    if (!merchant.token_val) {
+        merchant.token_val = `${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
+        await kv.set(`merchant:${id}`, merchant);
+    }
+
+    // 简单 token，生产环境建议 jwt
     const token = Buffer.from(`${id}:${password}`).toString('base64');
-    res.status(200).json({ token, name: merchant.name, balance: merchant.balance });
+    res.status(200).json({ token, name: merchant.name, balance: merchant.balance, token_val: merchant.token_val });
 }
