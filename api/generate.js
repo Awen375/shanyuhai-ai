@@ -1,4 +1,3 @@
-// Upstash REST helper
 const redis = {
   baseUrl: process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
@@ -75,7 +74,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '请通过商家二维码访问' });
     }
 
-    // 从 Redis 读取商家数据
     const merchantStr = await redis.get(`merchant:${merchantId}`);
     const merchant = merchantStr ? JSON.parse(merchantStr) : null;
     if (!merchant) return res.status(400).json({ error: '无效商家' });
@@ -85,7 +83,6 @@ export default async function handler(req, res) {
     }
     if (merchant.balance < 2) return res.status(402).json({ error: '商家算力不足' });
 
-    // 读取商家自定义设置
     const settingsStr = await redis.get(`merchant:${merchantId}:settings`);
     const settings = settingsStr ? JSON.parse(settingsStr) : {};
 
