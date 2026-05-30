@@ -64,6 +64,28 @@
             </table>
         </div>
 
+        <!-- 联系方式设置 -->
+        <div class="card">
+            <h2>📞 联系方式设置（商家页面弹窗）</h2>
+            <div class="flex-row">
+                <span class="label">微信二维码URL：</span>
+                <input type="text" id="contactQrcode" placeholder="https://example.com/qr.jpg" style="width:300px;">
+            </div>
+            <div class="flex-row">
+                <span class="label">管理员电话：</span>
+                <input type="text" id="contactPhone" placeholder="13800138000" style="width:200px;">
+            </div>
+            <div class="flex-row">
+                <span class="label">管理员微信：</span>
+                <input type="text" id="contactWechat" placeholder="shanyuhai_kefu" style="width:200px;">
+            </div>
+            <div class="flex-row">
+                <span class="label">其他说明：</span>
+                <input type="text" id="contactExtra" placeholder="工作时间 9:00-21:00" style="width:300px;">
+            </div>
+            <button onclick="saveContact()">💾 保存联系方式</button>
+        </div>
+
         <!-- 商家使用统计查询 -->
         <div class="card">
             <h2>📊 商家使用统计</h2>
@@ -128,6 +150,7 @@
         async function loadAll() {
             await loadMerchants();
             await loadRecords();
+            await loadContact();
         }
 
         // ===== 商家列表 =====
@@ -276,6 +299,29 @@
                 const time = new Date(r.time).toLocaleString('zh-CN');
                 tbody.innerHTML += `<tr><td>${time}</td><td>${r.ip||''}</td><td>${r.merchant||'无'}</td><td>${r.style}</td><td>${r.prompt||''}</td></tr>`;
             });
+        }
+
+        // ===== 联系方式 =====
+        async function loadContact(){
+            const res = await fetch('/api/admin/contact');
+            const data = await res.json();
+            document.getElementById('contactQrcode').value = data.qrcode_url || '';
+            document.getElementById('contactPhone').value = data.phone || '';
+            document.getElementById('contactWechat').value = data.wechat || '';
+            document.getElementById('contactExtra').value = data.extra || '';
+        }
+
+        async function saveContact(){
+            const qrcode_url = document.getElementById('contactQrcode').value.trim();
+            const phone = document.getElementById('contactPhone').value.trim();
+            const wechat = document.getElementById('contactWechat').value.trim();
+            const extra = document.getElementById('contactExtra').value.trim();
+            await fetch('/api/admin/contact', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ qrcode_url, phone, wechat, extra })
+            });
+            alert('联系方式已保存');
         }
     </script>
 </body>
