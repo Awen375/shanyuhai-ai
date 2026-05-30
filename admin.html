@@ -138,8 +138,7 @@
                 <button onclick="copyPassword()">📋 复制</button>
             </div>
             <div style="margin-top:15px;">
-                <label for="newMerchantPassword">新密码（留空不修改）</label>
-                <input type="password" id="newMerchantPassword" placeholder="新密码" style="width:200px;">
+                <input type="password" id="newMerchantPassword" placeholder="新密码（留空不修改）" style="width:200px;">
                 <button onclick="changeMerchantPassword()">🔑 修改密码</button>
                 <button onclick="loginAsMerchant()" class="success">🚀 直接登录商家后台</button>
             </div>
@@ -358,10 +357,11 @@
             }
         }
 
+        // ✅ 修改后的 loadRecords：使用 /api/admin/logs
         async function loadRecords() {
             const tbody = document.querySelector('#recordsTable tbody');
             tbody.innerHTML = '<tr><td colspan="5">加载中...</td></tr>';
-            const res = await fetch('/api/admin', { headers: { 'x-admin-token': token() } });
+            const res = await fetch('/api/admin/logs', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
             if (!res.ok) { tbody.innerHTML = `<tr><td colspan="5">错误: ${data.error}</td></tr>`; return; }
             tbody.innerHTML = '';
