@@ -26,6 +26,7 @@
         .btn-row { display: flex; gap: 10px; margin: 10px 0; }
         .btn-row button { flex: 1; padding: 10px; font-size: 14px; background: #3498db; }
         .btn-row .recharge-btn { background: #27ae60; }
+        .btn-row .pricing-btn { background: #8e44ad; }
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999;
@@ -40,7 +41,6 @@
     </style>
 </head>
 <body>
-    <!-- 登录框 -->
     <div id="loginBox" class="card">
         <h2>🔐 商家登录</h2>
         <input type="text" id="merchantId" placeholder="商家ID">
@@ -52,9 +52,7 @@
         <p id="loginError" style="color:red;"></p>
     </div>
 
-    <!-- 仪表盘 -->
     <div id="dashboard" class="card hidden">
-        <!-- 左上角商家ID -->
         <span class="merchant-id-badge" id="merchantIdDisplay"></span>
         <h2>🌊 山予海商家中心</h2>
         <div class="info">🧮 剩余算力：<strong id="balanceSpan"></strong></div>
@@ -62,6 +60,7 @@
         <div class="btn-row">
             <button onclick="showFlow('consume')">📊 算力明细</button>
             <button onclick="showFlow('recharge')" class="recharge-btn">💰 充值记录</button>
+            <button onclick="showPricing()" class="pricing-btn">💎 算力价目</button>
         </div>
         <p style="margin-top:15px;">专属推广二维码（客人扫码生成好评，每次消耗2算力）</p>
         <img id="qrImage" />
@@ -94,10 +93,22 @@
         </div>
     </div>
 
+    <!-- 价目表弹窗 -->
+    <div id="pricingModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>💎 算力价目表</h3>
+            <table>
+                <thead><tr><th>算力数量</th><th>价格</th></tr></thead>
+                <tbody id="pricingTableBody"></tbody>
+            </table>
+            <p id="pricingNote" style="text-align:center; color:#888; margin-top:10px;"></p>
+            <button onclick="document.getElementById('pricingModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '/api/merchant';
 
-        // 页面加载时，检查是否已登录
         (function() {
             if (localStorage.getItem('merchant_token')) {
                 document.getElementById('loginBox').classList.add('hidden');
@@ -131,10 +142,7 @@
         async function showDashboard() {
             const token = localStorage.getItem('merchant_token');
             const id = localStorage.getItem('merchant_id');
-            if (!token || !id) {
-                logout();
-                return;
-            }
+            if (!token || !id) { logout(); return; }
             const res = await fetch(`${API_BASE}/info`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -147,8 +155,7 @@
                 document.getElementById('qrUrl').innerText = url;
                 document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
             } else {
-                alert('登录已过期');
-                logout();
+                alert('登录已过期'); logout();
             }
         }
 
@@ -201,6 +208,15 @@
             }
             document.getElementById('flowTitle').innerText = filterType === 'consume' ? '算力消耗明细' : (filterType === 'recharge' ? '充值记录' : '全部流水');
             document.getElementById('flowModal').style.display = 'flex';
+        }
+
+        async function showPricing() {
+            const res = await fetch('/api/merchant/pricing');
+            const data = await res.json();
+            const tbody = document.getElementById('pricingTableBody');
+            tbody.innerHTML = data.items.map(item => `<tr><td>${item.amount} 算力</td><td>${item.price}</td></tr>`).join('');
+            document.getElementById('pricingNote').innerText = data.note || '';
+            document.getElementById('pricingModal').style.display = 'flex';
         }
 
         function logout() {
