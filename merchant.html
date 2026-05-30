@@ -40,6 +40,7 @@
     </style>
 </head>
 <body>
+    <!-- 登录框 -->
     <div id="loginBox" class="card">
         <h2>🔐 商家登录</h2>
         <input type="text" id="merchantId" placeholder="商家ID">
@@ -51,10 +52,10 @@
         <p id="loginError" style="color:red;"></p>
     </div>
 
+    <!-- 仪表盘 -->
     <div id="dashboard" class="card hidden">
         <!-- 左上角商家ID -->
         <span class="merchant-id-badge" id="merchantIdDisplay"></span>
-
         <h2>🌊 山予海商家中心</h2>
         <div class="info">🧮 剩余算力：<strong id="balanceSpan"></strong></div>
         <p class="recharge-tip">💡 充值算力请联系管理员</p>
@@ -96,6 +97,18 @@
     <script>
         const API_BASE = '/api/merchant';
 
+        // 页面加载时，检查是否已登录
+        (function() {
+            if (localStorage.getItem('merchant_token')) {
+                document.getElementById('loginBox').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                showDashboard();
+            } else {
+                document.getElementById('loginBox').classList.remove('hidden');
+                document.getElementById('dashboard').classList.add('hidden');
+            }
+        })();
+
         async function login() {
             const id = document.getElementById('merchantId').value.trim();
             const password = document.getElementById('password').value;
@@ -107,6 +120,8 @@
             if (data.token) {
                 localStorage.setItem('merchant_token', data.token);
                 localStorage.setItem('merchant_id', id);
+                document.getElementById('loginBox').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
                 showDashboard();
             } else {
                 document.getElementById('loginError').innerText = data.error || '登录失败';
@@ -116,20 +131,21 @@
         async function showDashboard() {
             const token = localStorage.getItem('merchant_token');
             const id = localStorage.getItem('merchant_id');
+            if (!token || !id) {
+                logout();
+                return;
+            }
             const res = await fetch(`${API_BASE}/info`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
             if (data.id) {
-                // 显示商家ID
                 document.getElementById('merchantIdDisplay').innerText = `商家ID：${data.id}`;
                 document.getElementById('balanceSpan').innerText = data.balance;
                 const tokenVal = data.token_val || '';
                 const url = `https://www.shanyh.top?merchant=${data.id}&token=${tokenVal}`;
                 document.getElementById('qrUrl').innerText = url;
                 document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
-                document.getElementById('loginBox').classList.add('hidden');
-                document.getElementById('dashboard').classList.remove('hidden');
             } else {
                 alert('登录已过期');
                 logout();
@@ -210,12 +226,6 @@
             if (data.extra) infoHtml += `<p>${data.extra}</p>`;
             if (!infoHtml) infoHtml = '<p>暂无联系方式</p>';
             document.getElementById('contactInfo').innerHTML = infoHtml;
-        }
-
-        if (localStorage.getItem('merchant_token')) {
-            document.getElementById('loginBox').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            showDashboard();
         }
     </script>
 </body>
