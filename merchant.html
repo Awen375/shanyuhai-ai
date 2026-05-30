@@ -117,7 +117,7 @@
         </div>
     </div>
 
-    <!-- 弹窗部分保持不变（联系管理员、流水、价目表） -->
+    <!-- 弹窗 -->
     <div id="contactModal" class="modal-overlay">
         <div class="modal-content">
             <h3>📞 联系管理员</h3>
@@ -152,10 +152,21 @@
 
     <script>
         const API_BASE = '/api/merchant';
-        let currentStyles = []; // 当前风格列表
+        let currentStyles = [];
 
-        // 初始化
+        // 自动登录检测
         (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoToken = urlParams.get('auto_token');
+            if (autoToken) {
+                localStorage.setItem('merchant_token', autoToken);
+                history.replaceState({}, '', '/merchant.html');
+                document.getElementById('loginBox').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                showDashboard();
+                loadSettings();
+                return;
+            }
             if (localStorage.getItem('merchant_token')) {
                 document.getElementById('loginBox').classList.add('hidden');
                 document.getElementById('dashboard').classList.remove('hidden');
@@ -256,7 +267,8 @@
         function addStyle() {
             currentStyles.push('');
             renderStyles();
-            document.querySelectorAll('#styleList .style-item input')[currentStyles.length-1].focus();
+            const inputs = document.querySelectorAll('#styleList .style-item input');
+            if (inputs.length > 0) inputs[inputs.length-1].focus();
         }
 
         function removeLastStyle() {
@@ -276,14 +288,13 @@
 
         async function saveSettings() {
             const token = localStorage.getItem('merchant_token');
-            // 收集所有风格输入框的值，过滤空项
             const inputs = document.querySelectorAll('#styleList .style-item input');
             const styles = [];
             inputs.forEach(input => {
                 const val = input.value.trim();
                 if (val) styles.push(val);
             });
-            currentStyles = styles; // 更新本地
+            currentStyles = styles;
             renderStyles();
 
             const settings = {
