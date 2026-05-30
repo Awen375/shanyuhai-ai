@@ -49,7 +49,14 @@ export default async function handler(req, res) {
 
     const { prompt, style, merchant: merchantId } = req.body;
     if (!style) return res.status(400).json({ error: '请选择写作风格' });
-
+const { token: qrToken } = req.body; // 前端需发送 token
+if (qrToken) {
+    const merchant = await kv.get(`merchant:${merchantId}`);
+    if (!merchant) return res.status(400).json({ error: '无效商家' });
+    if (merchant.token_val && merchant.token_val !== qrToken) {
+        return res.status(400).json({ error: '二维码已失效，请获取最新二维码' });
+    }
+}
     // 商家扣费模式
     if (merchantId) {
         const merchant = await kv.get(`merchant:${merchantId}`);
