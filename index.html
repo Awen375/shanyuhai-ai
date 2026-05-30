@@ -142,11 +142,7 @@
             <div class="form-group">
                 <label><i>✍️</i> 选择写作风格</label>
                 <select id="styleSelect">
-                    <option value="情绪共鸣型">💙 情绪共鸣型 · 让客人心动</option>
-                    <option value="宝藏发现型">💎 宝藏发现型 · 挖到宝的惊喜</option>
-                    <option value="氛围描绘型">🌅 氛围描绘型 · 沉浸式体验</option>
-                    <option value="干货整理型">📋 干货整理型 · 实用信息清单</option>
-                    <option value="攻略型">🗺️ 攻略型 · 完整游玩攻略</option>
+                    <!-- 动态加载 -->
                 </select>
             </div>
             <div class="form-group">
@@ -182,28 +178,66 @@
     </div>
 
     <script>
-        // 解析URL参数
+        // 解析 URL 参数
         const urlParams = new URLSearchParams(window.location.search);
         const merchantId = urlParams.get('merchant');
         const tokenVal = urlParams.get('token') || '';
 
-        // 处理界面切换
+        // 默认风格（当商家未自定义时使用）
+        const defaultStyles = [
+            "情绪共鸣型",
+            "宝藏发现型",
+            "氛围描绘型",
+            "干货整理型",
+            "攻略型"
+        ];
+
+        // 界面切换
         if (merchantId) {
             localStorage.setItem('current_merchant', merchantId);
             if (tokenVal) localStorage.setItem('current_token', tokenVal);
             document.getElementById('displayMerchantId').innerText = merchantId;
             document.getElementById('noMerchant').style.display = 'none';
             document.getElementById('mainApp').style.display = '';
+            // 加载商家自定义风格
+            loadStyles(merchantId);
         } else {
             const savedMerchant = localStorage.getItem('current_merchant');
             if (savedMerchant) {
                 document.getElementById('displayMerchantId').innerText = savedMerchant;
                 document.getElementById('noMerchant').style.display = 'none';
                 document.getElementById('mainApp').style.display = '';
+                loadStyles(savedMerchant);
             } else {
                 document.getElementById('noMerchant').style.display = '';
                 document.getElementById('mainApp').style.display = 'none';
+                // 扫码页面也设置默认风格（以免 JS 报错）
+                setDefaultStyles();
             }
+        }
+
+        // 设置默认风格
+        function setDefaultStyles() {
+            const select = document.getElementById('styleSelect');
+            select.innerHTML = defaultStyles.map(style => `<option value="${style}">${style}</option>`).join('');
+        }
+
+        // 从商家设置加载风格
+        async function loadStyles(merchantId) {
+            const select = document.getElementById('styleSelect');
+            try {
+                const res = await fetch(`/api/merchant/styles?merchant=${merchantId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.styles && data.styles.length > 0) {
+                        select.innerHTML = data.styles.map(style => `<option value="${style}">${style}</option>`).join('');
+                        return;
+                    }
+                }
+            } catch (e) {
+                // 接口不存在或网络错误，使用默认
+            }
+            setDefaultStyles();
         }
 
         // 退出商户
@@ -213,7 +247,7 @@
             location.href = '/';
         }
 
-        // ===== 连续点击10次标题弹出超级后台认证 =====
+        // 连续点击10次标题弹出超级后台认证
         function setupSecretTrigger(elementId) {
             const element = document.getElementById(elementId);
             if (!element) return;
@@ -221,9 +255,7 @@
             let timer = null;
             element.addEventListener('click', () => {
                 count++;
-                if (count === 1) {
-                    timer = setTimeout(() => { count = 0; }, 3000); // 3秒内连点有效
-                }
+                if (count === 1) timer = setTimeout(() => { count = 0; }, 3000);
                 if (count >= 10) {
                     clearTimeout(timer);
                     count = 0;
@@ -231,10 +263,8 @@
                 }
             });
         }
-
-        // 为两个页面各自的标题绑定连点事件
-        setupSecretTrigger('scanTitle');   // 扫码页面的标题
-        setupSecretTrigger('mainTitle');   // 生成界面的标题
+        setupSecretTrigger('scanTitle');
+        setupSecretTrigger('mainTitle');
 
         function checkAdminPass() {
             const pass = document.getElementById('adminPassInput').value;
