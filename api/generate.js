@@ -1,4 +1,9 @@
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 const defaultStyleGuides = {
     "情绪共鸣型": "你是感情细腻的体验者。用第一人称写小红书好评，抒发内心感动、放松与共鸣，带emoji和话题标签。",
@@ -44,7 +49,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '请通过商家二维码访问' });
     }
 
-    const merchant = await kv.get(`merchant:${merchantId}`);
+    // 从 Redis 读取商家数据
+    const merchantStr = await redis.get(`merchant:${merchantId}`);
+    const merchant = merchantStr ? JSON.parse(merchantStr) : null;
     if (!merchant) return res.status(400).json({ error: '无效商家' });
     if (merchant.status === 'banned') return res.status(403).json({ error: '该商家已被封禁' });
     if (merchant.token_val && merchant.token_val !== qrToken) {
@@ -53,9 +60,9 @@ export default async function handler(req, res) {
     if (merchant.balance < 2) return res.status(402).json({ error: '商家算力不足' });
 
     // 读取商家自定义设置
-    const settings = await kv.get(`merchant:${merchantId}:settings`) || {};
+    const settingsStr = await redis.get(`merchant:${merchantId}:settings`);
+    const settings = settingsStr ? JSON.parse(settingsStr) : {};
 
-    // 如果没有任何自定义信息，则拒绝生成
     if (!settings.industry && !settings.product) {
         return res.status(400).json({ error: '该商家尚未设置行业和产品信息，请联系商家完善' });
     }
@@ -71,16 +78,18 @@ export default async function handler(req, res) {
     // 扣除算力
     const userIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '未知';
     merchant.balance -= 2;
-    await kv.set(`merchant:${merchantId}`, merchant);
+    await redis.set(`merchant:${merchantId}`, JSON.stringify(merchant));
 
     // 记录消费流水
-    await kv.set(`flow:${merchantId}:${Date.now()}`, JSON.stringify({
+    const flowKey = `flow:${merchantId}:${Date.now()}`;
+    await redis.set(flowKey, JSON.stringify({
         type: 'consume',
         amount: 2,
         balanceAfter: merchant.balance,
         time: new Date().toISOString(),
         note: `生成好评消耗 - 使用者IP: ${userIP}`
     }));
+    await redis.expire(flowKey, 60 * 60 * 24 * 30);
 
     // 日志
     const logEntry = {
@@ -91,8 +100,8 @@ export default async function handler(req, res) {
         prompt: prompt || ''
     };
     const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2,8)}`;
-    await kv.set(logKey, JSON.stringify(logEntry));
-    await kv.expire(logKey, 60*60*24*30);
+    await redis.set(logKey, JSON.stringify(logEntry));
+    await redis.expire(logKey, 60 * 60 * 24 * 30);
 
     return generateContent(style, prompt, facts, res);
 }
