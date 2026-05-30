@@ -37,9 +37,15 @@
             position: relative; z-index: 1; background: rgba(255,255,255,0.8); backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px); border-radius: 32px;
             box-shadow: 0 25px 50px rgba(15,76,129,0.15), 0 0 0 1px rgba(255,255,255,0.6) inset;
-            padding: 45px 35px; max-width: 550px; width: 100%; border: 1px solid rgba(255,255,255,0.5);
+            padding: 35px; max-width: 550px; width: 100%; border: 1px solid rgba(255,255,255,0.5);
         }
-        .header { text-align: center; margin-bottom: 35px; }
+        .merchant-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding: 8px 16px;
+            background: rgba(255,255,255,0.6); border-radius: 20px;
+            font-size: 14px; color: #0b4f6c;
+        }
+        .header { text-align: center; margin-bottom: 25px; }
         .logo-icon { font-size: 58px; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); animation: float 3s ease-in-out infinite; }
         @keyframes float { 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-8px); } }
         h1 {
@@ -95,7 +101,7 @@
         .modal-box input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; margin: 15px 0; font-size: 16px; }
         .modal-box button { width: auto; margin: 5px; }
         @media (max-width: 480px) {
-            .container { padding: 30px 20px; border-radius: 28px; }
+            .container { padding: 25px 20px; border-radius: 28px; }
             h1 { font-size: 26px; }
             .logo-icon { font-size: 48px; }
         }
@@ -115,6 +121,12 @@
     <!-- 有 merchant 参数时显示 -->
     <div id="mainApp" style="display: none; width: 100%;">
         <div class="container">
+            <!-- 商户ID及退出按钮 -->
+            <div class="merchant-bar">
+                <span>商家：<strong id="displayMerchantId"></strong></span>
+                <button onclick="exitMerchant()" style="width:auto; padding:6px 16px; background:#ccc; color:#333; border:none; border-radius:20px; cursor:pointer; font-size:13px;">退出</button>
+            </div>
+
             <div class="header">
                 <div class="logo-icon">🌊</div>
                 <h1 id="secretTrigger">山予海民宿</h1>
@@ -151,49 +163,61 @@
     </div>
 
     <script>
-        // ===== merchant 参数检测 =====
-        (function(){
-            const urlParams = new URLSearchParams(window.location.search);
-            const merchantId = urlParams.get('merchant');
-            if(merchantId) {
-                localStorage.setItem('current_merchant', merchantId);
+        // 解析URL参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const merchantId = urlParams.get('merchant');
+        const tokenVal = urlParams.get('token') || '';
+
+        // 处理界面切换
+        if (merchantId) {
+            localStorage.setItem('current_merchant', merchantId);
+            if (tokenVal) localStorage.setItem('current_token', tokenVal);
+            document.getElementById('displayMerchantId').innerText = merchantId;
+            document.getElementById('noMerchant').style.display = 'none';
+            document.getElementById('mainApp').style.display = '';
+        } else {
+            const savedMerchant = localStorage.getItem('current_merchant');
+            if (savedMerchant) {
+                document.getElementById('displayMerchantId').innerText = savedMerchant;
                 document.getElementById('noMerchant').style.display = 'none';
                 document.getElementById('mainApp').style.display = '';
             } else {
-                if(localStorage.getItem('current_merchant')) {
-                    document.getElementById('noMerchant').style.display = 'none';
-                    document.getElementById('mainApp').style.display = '';
-                } else {
-                    document.getElementById('noMerchant').style.display = '';
-                    document.getElementById('mainApp').style.display = 'none';
-                }
+                document.getElementById('noMerchant').style.display = '';
+                document.getElementById('mainApp').style.display = 'none';
             }
-        })();
+        }
 
-        // ===== 隐藏后台入口 (连续点击标题5次) =====
+        // 退出商户
+        function exitMerchant() {
+            localStorage.removeItem('current_merchant');
+            localStorage.removeItem('current_token');
+            location.href = '/';
+        }
+
+        // 隐藏后台入口 (连续点击标题5次)
         const trigger = document.getElementById('secretTrigger');
         let clickCount = 0, clickTimer = null;
-        trigger.addEventListener('click', ()=>{
+        trigger.addEventListener('click', () => {
             clickCount++;
-            if(clickCount === 1) clickTimer = setTimeout(()=>{ clickCount = 0; }, 2000);
-            if(clickCount >= 5) {
+            if (clickCount === 1) clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+            if (clickCount >= 5) {
                 clearTimeout(clickTimer); clickCount = 0;
                 document.getElementById('adminModal').style.display = 'flex';
             }
         });
 
-        function checkAdminPass(){
+        function checkAdminPass() {
             const pass = document.getElementById('adminPassInput').value;
-            if(pass === 'shanyuhai2024') {   // ⚠️ 改成你自己的超级密码
+            if (pass === 'zjm1314520') {   // 超级密码
                 window.location.href = '/admin.html';
             } else {
                 alert('密码错误');
             }
         }
-        function closeAdminModal(){ document.getElementById('adminModal').style.display = 'none'; }
+        function closeAdminModal() { document.getElementById('adminModal').style.display = 'none'; }
 
-        // ===== 生成好评 =====
-        async function generate(){
+        // 生成好评
+        async function generate() {
             const btn = document.getElementById('generateBtn');
             const style = document.getElementById('styleSelect').value;
             const prompt = document.getElementById('prompt').value.trim();
@@ -211,16 +235,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         prompt, style,
-                        merchant: localStorage.getItem('current_merchant') || ''
+                        merchant: localStorage.getItem('current_merchant') || '',
+                        token: localStorage.getItem('current_token') || ''
                     })
                 });
                 const data = await res.json();
-                if(data.result) {
+                if (data.result) {
                     resultBox.innerText = data.result;
                 } else {
                     throw new Error(data.error || '生成失败');
                 }
-            } catch(err) {
+            } catch (err) {
                 resultBox.innerText = '❌ ' + err.message;
                 resultBox.style.color = '#c44536';
             } finally {
