@@ -25,7 +25,7 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             height: 100vh; text-align: center; color: #1e3b4a; z-index: 2; position: relative; padding: 20px;
         }
-        .scan-reminder h2 { font-size: 26px; margin-bottom: 15px; color: #0b4f6c; }
+        .scan-reminder h2 { font-size: 26px; margin-bottom: 15px; color: #0b4f6c; user-select: none; cursor: pointer; }
         .scan-reminder p { color: #5a7d8c; margin: 10px 0; font-size: 15px; }
         .scan-buttons {
             margin-top: 25px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;
@@ -117,7 +117,7 @@
     <!-- 无 merchant 参数时显示 -->
     <div id="noMerchant" class="scan-reminder">
         <div style="font-size: 60px;">🌊</div>
-        <h2>山予海民宿 · AI好评助手</h2>
+        <h2 id="scanTitle">山予海民宿 · AI好评助手</h2>
         <p>请扫描民宿提供的专属二维码使用</p>
         <p style="color: #888; font-size: 14px;">如有疑问，请联系民宿管家</p>
         <div class="scan-buttons">
@@ -129,7 +129,6 @@
     <!-- 有 merchant 参数时显示 -->
     <div id="mainApp" style="display: none; width: 100%;">
         <div class="container">
-            <!-- 商户ID及退出按钮 -->
             <div class="merchant-bar">
                 <span>商家：<strong id="displayMerchantId"></strong></span>
                 <button onclick="exitMerchant()" style="width:auto; padding:6px 16px; background:#ccc; color:#333; border:none; border-radius:20px; cursor:pointer; font-size:13px;">退出</button>
@@ -137,7 +136,7 @@
 
             <div class="header">
                 <div class="logo-icon">🌊</div>
-                <h1 id="secretTrigger">山予海民宿</h1>
+                <h1 id="mainTitle">山予海民宿</h1>
                 <div class="subtitle"><span>✨ AI好评助手</span><span>霞浦·山予海</span></div>
             </div>
             <div class="form-group">
@@ -214,17 +213,28 @@
             location.href = '/';
         }
 
-        // 隐藏后台入口 (连续点击标题5次)
-        const trigger = document.getElementById('secretTrigger');
-        let clickCount = 0, clickTimer = null;
-        trigger.addEventListener('click', () => {
-            clickCount++;
-            if (clickCount === 1) clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
-            if (clickCount >= 5) {
-                clearTimeout(clickTimer); clickCount = 0;
-                document.getElementById('adminModal').style.display = 'flex';
-            }
-        });
+        // ===== 连续点击10次标题弹出超级后台认证 =====
+        function setupSecretTrigger(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            let count = 0;
+            let timer = null;
+            element.addEventListener('click', () => {
+                count++;
+                if (count === 1) {
+                    timer = setTimeout(() => { count = 0; }, 3000); // 3秒内连点有效
+                }
+                if (count >= 10) {
+                    clearTimeout(timer);
+                    count = 0;
+                    document.getElementById('adminModal').style.display = 'flex';
+                }
+            });
+        }
+
+        // 为两个页面各自的标题绑定连点事件
+        setupSecretTrigger('scanTitle');   // 扫码页面的标题
+        setupSecretTrigger('mainTitle');   // 生成界面的标题
 
         function checkAdminPass() {
             const pass = document.getElementById('adminPassInput').value;
