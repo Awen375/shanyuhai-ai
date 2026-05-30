@@ -4,7 +4,26 @@ export default async function handler(req, res) {
     const token = req.headers['x-admin-token'];
     if (token !== 'zjm1314520') return res.status(403).json({ error: '禁止访问' });
 
-    // ---------- 统计接口 ----------
+    // ---------- 算力流水 ----------
+    if (req.method === 'GET' && req.query?.action === 'flow') {
+        const { merchant } = req.query;
+        if (!merchant) return res.status(400).json({ error: '缺少 merchant 参数' });
+
+        const keys = await kv.keys(`flow:${merchant}:*`);
+        const flows = [];
+        for (const key of keys) {
+            const raw = await kv.get(key);
+            if (raw) {
+                try {
+                    flows.push(JSON.parse(raw));
+                } catch (e) { /* skip */ }
+            }
+        }
+        flows.sort((a, b) => new Date(b.time) - new Date(a.time));
+        return res.status(200).json({ flows });
+    }
+
+    // ---------- 使用统计 ----------
     if (req.method === 'GET' && req.query?.action === 'stats') {
         const { merchant, start, end } = req.query;
         if (!merchant || !start || !end) return res.status(400).json({ error: '参数不全' });
@@ -15,7 +34,7 @@ export default async function handler(req, res) {
 
         const startDate = new Date(start);
         const endDate = new Date(end);
-        endDate.setHours(23, 59, 59, 999); // 包含结束日整天
+        endDate.setHours(23, 59, 59, 999);
 
         for (const key of keys) {
             const raw = await kv.get(key);
@@ -32,11 +51,10 @@ export default async function handler(req, res) {
                 }
             } catch (e) { /* skip */ }
         }
-
         return res.status(200).json({ total, daily });
     }
 
-    // ---------- 列表 ----------
+    // ---------- 商家列表 ----------
     if (req.method === 'GET') {
         const keys = await kv.keys('merchant:*');
         const merchants = [];
@@ -52,20 +70,30 @@ export default async function handler(req, res) {
         return res.status(200).json({ merchants });
     }
 
-    // ---------- 新增 ----------
+    // ---------- 新增商家 ----------
     if (req.method === 'POST') {
         const { id, name, password, balance } = req.body;
         if (!id || !password) return res.status(400).json({ error: '缺少ID或密码' });
-        // 检查是否存在
         const exists = await kv.get(`merchant:${id}`);
         if (exists) return res.status(400).json({ error: '商家ID已存在' });
 
+        const initialBalance = balance || 100;
         await kv.set(`merchant:${id}`, {
             name: name || '',
             password,
-            balance: balance || 100,
+            balance: initialBalance,
             status: 'active'
         });
+
+        // 写流水
+        await kv.set(`flow:${id}:${Date.now()}`, JSON.stringify({
+            type: 'initial',
+            amount: initialBalance,
+            balanceAfter: initialBalance,
+            time: new Date().toISOString(),
+            note: '创建商家'
+        }));
+
         return res.status(200).json({ success: true });
     }
 
@@ -75,8 +103,29 @@ export default async function handler(req, res) {
         if (!id) return res.status(400).json({ error: '缺少id' });
         const merchant = await kv.get(`merchant:${id}`);
         if (!merchant) return res.status(404).json({ error: '商家不存在' });
-        if (balance !== undefined) merchant.balance = Number(balance);
-        if (status) merchant.status = status;   // 'active' 或 'banned'
+
+        // 处理余额变更
+        if (balance !== undefined) {
+            const oldBalance = merchant.balance || 0;
+            const newBalance = Number(balance);
+            merchant.balance = newBalance;
+
+            // 写充值流水
+            const changeAmount = newBalance - oldBalance;
+            await kv.set(`flow:${id}:${Date.now()}`, JSON.stringify({
+                type: 'recharge',
+                amount: changeAmount,
+                balanceAfter: newBalance,
+                time: new Date().toISOString(),
+                note: `管理员操作，从 ${oldBalance} 调整为 ${newBalance}`
+            }));
+        }
+
+        // 处理状态变更
+        if (status) {
+            merchant.status = status;
+        }
+
         await kv.set(`merchant:${id}`, merchant);
         return res.status(200).json({ success: true });
     }
@@ -86,6 +135,7 @@ export default async function handler(req, res) {
         const { id } = req.body;
         if (!id) return res.status(400).json({ error: '缺少id' });
         await kv.del(`merchant:${id}`);
+        // 可选：删除相关流水？保留流水以便查询历史，所以不删
         return res.status(200).json({ success: true });
     }
 
