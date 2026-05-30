@@ -11,7 +11,6 @@
             font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
             min-height: 100vh;
             background: linear-gradient(165deg, #e8f4f8 0%, #d4eaf3 30%, #b8dff0 60%, #a3d2e0 100%);
-            background-attachment: fixed;
             display: flex; align-items: center; justify-content: center;
             padding: 20px; position: relative; overflow-x: hidden;
         }
@@ -27,34 +26,28 @@
         }
         .scan-reminder h2 { font-size: 26px; margin-bottom: 15px; color: #0b4f6c; user-select: none; cursor: pointer; }
         .scan-reminder p { color: #5a7d8c; margin: 10px 0; font-size: 15px; }
-        .scan-buttons {
-            margin-top: 25px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;
-        }
+        .scan-buttons { margin-top: 25px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
         .scan-btn {
             background: rgba(255,255,255,0.7); backdrop-filter: blur(10px);
             padding: 12px 25px; border-radius: 50px; color: #0b4f6c; text-decoration: none;
-            font-size: 15px; font-weight: 500; border: 1px solid rgba(30,144,255,0.3); transition: all 0.3s; display: inline-block;
-            cursor: pointer;
+            font-size: 15px; font-weight: 500; border: 1px solid rgba(30,144,255,0.3); transition: all 0.3s; display: inline-block; cursor: pointer;
         }
         .scan-btn:hover { background: rgba(30,144,255,0.15); border-color: rgba(30,144,255,0.5); }
         .container {
             position: relative; z-index: 1; background: rgba(255,255,255,0.8); backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px); border-radius: 32px;
-            box-shadow: 0 25px 50px rgba(15,76,129,0.15), 0 0 0 1px rgba(255,255,255,0.6) inset;
+            border-radius: 32px; box-shadow: 0 25px 50px rgba(15,76,129,0.15), 0 0 0 1px rgba(255,255,255,0.6) inset;
             padding: 35px; max-width: 550px; width: 100%; border: 1px solid rgba(255,255,255,0.5);
         }
         .merchant-bar {
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 20px; padding: 8px 16px;
-            background: rgba(255,255,255,0.6); border-radius: 20px;
-            font-size: 14px; color: #0b4f6c;
+            background: rgba(255,255,255,0.6); border-radius: 20px; font-size: 14px; color: #0b4f6c;
         }
         .header { text-align: center; margin-bottom: 25px; }
         .logo-icon { font-size: 58px; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); animation: float 3s ease-in-out infinite; }
         @keyframes float { 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-8px); } }
         h1 {
-            font-size: 32px; font-weight: 700;
-            background: linear-gradient(135deg, #0b4f6c, #1e8bc3);
+            font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #0b4f6c, #1e8bc3);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
             margin-bottom: 8px; letter-spacing: 1px; user-select: none; cursor: pointer;
         }
@@ -81,13 +74,6 @@
             letter-spacing: 1px; position: relative; overflow: hidden;
         }
         button:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: 0 5px 15px rgba(15,76,129,0.2); }
-        button::after {
-            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%); opacity: 0; transition: opacity 0.3s;
-        }
-        button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(15,76,129,0.45); }
-        button:hover:not(:disabled)::after { opacity: 1; }
-        button:active:not(:disabled) { transform: translateY(0); }
         .result-box {
             background: rgba(255,255,255,0.75); backdrop-filter: blur(10px); border-radius: 20px;
             padding: 22px; text-align: left; min-height: 80px; color: #1e3b4a; line-height: 1.8;
@@ -113,8 +99,6 @@
     </style>
 </head>
 <body>
-
-    <!-- 无 merchant 参数时显示 -->
     <div id="noMerchant" class="scan-reminder">
         <div style="font-size: 60px;">🌊</div>
         <h2 id="scanTitle">山予海民宿 · AI好评助手</h2>
@@ -126,27 +110,23 @@
         </div>
     </div>
 
-    <!-- 有 merchant 参数时显示 -->
     <div id="mainApp" style="display: none; width: 100%;">
         <div class="container">
             <div class="merchant-bar">
                 <span>商家：<strong id="displayMerchantId"></strong></span>
                 <button onclick="exitMerchant()" style="width:auto; padding:6px 16px; background:#ccc; color:#333; border:none; border-radius:20px; cursor:pointer; font-size:13px;">退出</button>
             </div>
-
             <div class="header">
                 <div class="logo-icon">🌊</div>
                 <h1 id="mainTitle">山予海民宿</h1>
                 <div class="subtitle"><span>✨ AI好评助手</span><span>霞浦·山予海</span></div>
             </div>
             <div class="form-group">
-                <label><i>✍️</i> 选择写作风格</label>
-                <select id="styleSelect">
-                    <!-- 动态加载 -->
-                </select>
+                <label for="styleSelect"><i>✍️</i> 选择写作风格</label>
+                <select id="styleSelect"></select>
             </div>
             <div class="form-group">
-                <label><i>💬</i> 额外补充（可选）</label>
+                <label for="prompt"><i>💬</i> 额外补充（可选）</label>
                 <textarea id="prompt" placeholder="例如：强调海景日出、步行到海滩3分钟、亲子房..."></textarea>
             </div>
             <button id="generateBtn" onclick="generate()">🌊 生成民宿好评</button>
@@ -155,7 +135,6 @@
         </div>
     </div>
 
-    <!-- 超级后台入口模态框 -->
     <div id="adminModal" class="modal-overlay">
         <div class="modal-box">
             <h3>🔐 管理员验证</h3>
@@ -165,41 +144,28 @@
         </div>
     </div>
 
-    <!-- 联系管理员弹窗 -->
     <div id="contactModal" class="modal-overlay">
         <div class="modal-box">
             <h3>📞 联系管理员</h3>
-            <div id="contactQrContainer">
-                <img id="contactQrImage" src="" alt="管理员微信二维码" />
-            </div>
+            <div id="contactQrContainer"><img id="contactQrImage" src="" alt="管理员微信二维码" /></div>
             <div id="contactInfo" style="margin: 10px 0; font-size: 14px;"></div>
             <button onclick="document.getElementById('contactModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
         </div>
     </div>
 
     <script>
-        // 解析 URL 参数
         const urlParams = new URLSearchParams(window.location.search);
         const merchantId = urlParams.get('merchant');
         const tokenVal = urlParams.get('token') || '';
 
-        // 默认风格（当商家未自定义时使用）
-        const defaultStyles = [
-            "情绪共鸣型",
-            "宝藏发现型",
-            "氛围描绘型",
-            "干货整理型",
-            "攻略型"
-        ];
+        const defaultStyles = ["情绪共鸣型","宝藏发现型","氛围描绘型","干货整理型","攻略型"];
 
-        // 界面切换
         if (merchantId) {
             localStorage.setItem('current_merchant', merchantId);
             if (tokenVal) localStorage.setItem('current_token', tokenVal);
             document.getElementById('displayMerchantId').innerText = merchantId;
             document.getElementById('noMerchant').style.display = 'none';
             document.getElementById('mainApp').style.display = '';
-            // 加载商家自定义风格
             loadStyles(merchantId);
         } else {
             const savedMerchant = localStorage.getItem('current_merchant');
@@ -211,54 +177,43 @@
             } else {
                 document.getElementById('noMerchant').style.display = '';
                 document.getElementById('mainApp').style.display = 'none';
-                // 扫码页面也设置默认风格（以免 JS 报错）
                 setDefaultStyles();
             }
         }
 
-        // 设置默认风格
         function setDefaultStyles() {
-            const select = document.getElementById('styleSelect');
-            select.innerHTML = defaultStyles.map(style => `<option value="${style}">${style}</option>`).join('');
+            document.getElementById('styleSelect').innerHTML = defaultStyles.map(s => `<option value="${s}">${s}</option>`).join('');
         }
 
-        // 从商家设置加载风格
-        async function loadStyles(merchantId) {
-            const select = document.getElementById('styleSelect');
+        async function loadStyles(merchant) {
             try {
-                const res = await fetch(`/api/merchant/styles?merchant=${merchantId}`);
+                const res = await fetch(`/api/merchant/styles?merchant=${merchant}`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.styles && data.styles.length > 0) {
-                        select.innerHTML = data.styles.map(style => `<option value="${style}">${style}</option>`).join('');
+                        document.getElementById('styleSelect').innerHTML = data.styles.map(s => `<option value="${s}">${s}</option>`).join('');
                         return;
                     }
                 }
-            } catch (e) {
-                // 接口不存在或网络错误，使用默认
-            }
+            } catch(e) {}
             setDefaultStyles();
         }
 
-        // 退出商户
         function exitMerchant() {
             localStorage.removeItem('current_merchant');
             localStorage.removeItem('current_token');
             location.href = '/';
         }
 
-        // 连续点击10次标题弹出超级后台认证
-        function setupSecretTrigger(elementId) {
-            const element = document.getElementById(elementId);
-            if (!element) return;
-            let count = 0;
-            let timer = null;
-            element.addEventListener('click', () => {
+        function setupSecretTrigger(elId) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            let count = 0, timer = null;
+            el.addEventListener('click', () => {
                 count++;
                 if (count === 1) timer = setTimeout(() => { count = 0; }, 3000);
                 if (count >= 10) {
-                    clearTimeout(timer);
-                    count = 0;
+                    clearTimeout(timer); count = 0;
                     document.getElementById('adminModal').style.display = 'flex';
                 }
             });
@@ -267,8 +222,7 @@
         setupSecretTrigger('mainTitle');
 
         function checkAdminPass() {
-            const pass = document.getElementById('adminPassInput').value;
-            if (pass === 'zjm1314520') {
+            if (document.getElementById('adminPassInput').value === 'zjm1314520') {
                 window.location.href = '/admin.html';
             } else {
                 alert('密码错误');
@@ -276,7 +230,6 @@
         }
         function closeAdminModal() { document.getElementById('adminModal').style.display = 'none'; }
 
-        // 联系管理员弹窗
         async function openContact() {
             document.getElementById('contactModal').style.display = 'flex';
             try {
@@ -289,39 +242,32 @@
                 } else {
                     document.getElementById('contactQrContainer').style.display = 'none';
                 }
-                let infoHtml = '';
-                if (data.phone) infoHtml += `<p>📱 电话：${data.phone}</p>`;
-                if (data.wechat) infoHtml += `<p>💬 微信：${data.wechat}</p>`;
-                if (data.extra) infoHtml += `<p>${data.extra}</p>`;
-                if (!infoHtml) infoHtml = '<p>暂无联系方式</p>';
-                document.getElementById('contactInfo').innerHTML = infoHtml;
-            } catch (e) {
+                let html = '';
+                if (data.phone) html += `<p>📱 电话：${data.phone}</p>`;
+                if (data.wechat) html += `<p>💬 微信：${data.wechat}</p>`;
+                if (data.extra) html += `<p>${data.extra}</p>`;
+                if (!html) html = '<p>暂无联系方式</p>';
+                document.getElementById('contactInfo').innerHTML = html;
+            } catch(e) {
                 document.getElementById('contactInfo').innerHTML = '<p>获取联系方式失败</p>';
             }
         }
 
-        // 生成好评
         async function generate() {
             const btn = document.getElementById('generateBtn');
             const style = document.getElementById('styleSelect').value;
             const prompt = document.getElementById('prompt').value.trim();
             const resultBox = document.getElementById('result');
-
             btn.disabled = true;
             btn.innerText = '⏳ 正在生成中...';
             resultBox.classList.add('show');
             resultBox.innerText = '⏳ 山予海正在为您书写...';
             resultBox.style.color = '#1e3b4a';
-
             try {
                 const res = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prompt, style,
-                        merchant: localStorage.getItem('current_merchant') || '',
-                        token: localStorage.getItem('current_token') || ''
-                    })
+                    body: JSON.stringify({ prompt, style, merchant: localStorage.getItem('current_merchant') || '', token: localStorage.getItem('current_token') || '' })
                 });
                 const data = await res.json();
                 if (data.result) {
@@ -329,7 +275,7 @@
                 } else {
                     throw new Error(data.error || '生成失败');
                 }
-            } catch (err) {
+            } catch(err) {
                 resultBox.innerText = '❌ ' + err.message;
                 resultBox.style.color = '#c44536';
             } finally {
