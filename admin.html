@@ -8,7 +8,7 @@
         body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background: #f0f4f8; padding: 30px; }
         .container { max-width: 1100px; margin: 0 auto; }
         .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
-        h2 { color: #0b4f6c; margin-top: 0; }
+        h2 { color: #0b4f6c; margin-top: 0; cursor: pointer; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { border-bottom: 1px solid #eee; padding: 10px 6px; text-align: left; }
         th { background: #f8fafc; }
@@ -23,7 +23,6 @@
         .hidden { display: none; }
         #loginBox { max-width: 350px; margin: 100px auto; }
         .stat-box { background: #f0f8ff; border-radius: 12px; padding: 15px; margin: 15px 0; }
-        /* 模态框 */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999;
@@ -32,6 +31,7 @@
         .modal-content {
             background: white; border-radius: 20px; padding: 25px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
         }
+        #contactPanel { margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -64,26 +64,28 @@
             </table>
         </div>
 
-        <!-- 联系方式设置 -->
+        <!-- 联系方式设置（可折叠） -->
         <div class="card">
-            <h2>📞 联系方式设置（商家页面弹窗）</h2>
-            <div class="flex-row">
-                <span class="label">微信二维码URL：</span>
-                <input type="text" id="contactQrcode" placeholder="https://example.com/qr.jpg" style="width:300px;">
+            <h2 onclick="toggleContact()">📞 联系方式设置（点击展开/折叠）</h2>
+            <div id="contactPanel">
+                <div class="flex-row">
+                    <span class="label">微信二维码URL：</span>
+                    <input type="text" id="contactQrcode" placeholder="https://example.com/qr.jpg" style="width:300px;">
+                </div>
+                <div class="flex-row">
+                    <span class="label">管理员电话：</span>
+                    <input type="text" id="contactPhone" placeholder="13800138000" style="width:200px;">
+                </div>
+                <div class="flex-row">
+                    <span class="label">管理员微信：</span>
+                    <input type="text" id="contactWechat" placeholder="shanyuhai_kefu" style="width:200px;">
+                </div>
+                <div class="flex-row">
+                    <span class="label">其他说明：</span>
+                    <input type="text" id="contactExtra" placeholder="工作时间 9:00-21:00" style="width:300px;">
+                </div>
+                <button onclick="saveContact()">💾 保存联系方式</button>
             </div>
-            <div class="flex-row">
-                <span class="label">管理员电话：</span>
-                <input type="text" id="contactPhone" placeholder="13800138000" style="width:200px;">
-            </div>
-            <div class="flex-row">
-                <span class="label">管理员微信：</span>
-                <input type="text" id="contactWechat" placeholder="shanyuhai_kefu" style="width:200px;">
-            </div>
-            <div class="flex-row">
-                <span class="label">其他说明：</span>
-                <input type="text" id="contactExtra" placeholder="工作时间 9:00-21:00" style="width:300px;">
-            </div>
-            <button onclick="saveContact()">💾 保存联系方式</button>
         </div>
 
         <!-- 商家使用统计查询 -->
@@ -153,7 +155,13 @@
             await loadContact();
         }
 
-        // ===== 商家列表 =====
+        // 折叠联系方式
+        function toggleContact() {
+            const panel = document.getElementById('contactPanel');
+            panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+
+        // ===== 商家管理 =====
         async function loadMerchants(){
             const res = await fetch('/api/admin/merchants', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
@@ -230,7 +238,7 @@
             await loadMerchants();
         }
 
-        // ===== 流水 =====
+        // 流水
         async function showFlow(merchantId){
             const res = await fetch(`/api/admin/merchants?action=flow&merchant=${merchantId}`, {
                 headers: { 'x-admin-token': token() }
@@ -259,7 +267,7 @@
             document.getElementById('flowModal').style.display = 'flex';
         }
 
-        // ===== 统计 =====
+        // 统计
         async function queryStats(){
             const merchantId = document.getElementById('statMerchantSelect').value;
             if(!merchantId) return alert('请选择商家');
@@ -286,7 +294,7 @@
             }
         }
 
-        // ===== 全部日志 =====
+        // 全部日志
         async function loadRecords(){
             const tbody = document.querySelector('#recordsTable tbody');
             tbody.innerHTML = '<tr><td colspan="5">加载中...</td></tr>';
@@ -301,7 +309,7 @@
             });
         }
 
-        // ===== 联系方式 =====
+        // 联系方式
         async function loadContact(){
             const res = await fetch('/api/admin/contact');
             const data = await res.json();
