@@ -15,7 +15,7 @@
             font-size: 13px; color: #0b4f6c; background: #e8f4fd;
             padding: 4px 14px; border-radius: 20px; font-weight: 500;
         }
-        h2 { color: #0b4f6c; margin-bottom: 20px; padding-top: 5px; }
+        h2 { color: #0b4f6c; margin-bottom: 20px; padding-top: 5px; cursor: pointer; user-select: none; }
         input, textarea, select, button { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; }
         button { background: #1e90ff; color: white; border: none; cursor: pointer; font-weight: 600; border-radius: 50px; }
         .info { text-align: center; font-size: 18px; margin: 20px 0; }
@@ -38,6 +38,11 @@
         table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
         th, td { border-bottom: 1px solid #eee; padding: 8px 6px; text-align: left; }
         th { background: #f8fafc; }
+        .style-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .style-item input { flex: 1; margin-bottom: 0; }
+        .style-item button { width: auto; padding: 6px 15px; font-size: 14px; background: #e74c3c; }
+        .collapse-icon { float: right; transition: transform 0.3s; }
+        .collapsed .collapse-icon { transform: rotate(-90deg); }
     </style>
 </head>
 <body>
@@ -53,7 +58,7 @@
         <p id="loginError" style="color:red;"></p>
     </div>
 
-    <!-- 主面板（仪表盘+设置） -->
+    <!-- 主面板 -->
     <div id="dashboard" class="hidden" style="width:100%; max-width:500px;">
         <!-- 商家信息卡片 -->
         <div class="card">
@@ -73,35 +78,55 @@
             <button onclick="logout()" style="background:#ccc;color:#333;">退出登录</button>
         </div>
 
-        <!-- 店铺设置卡片 -->
+        <!-- 店铺设置卡片（默认折叠） -->
+        <div class="card" id="settingsCard">
+            <h2 onclick="toggleSettings()">
+                🛠️ 店铺设置
+                <span class="collapse-icon">▼</span>
+            </h2>
+            <div id="settingsPanel" style="display: none;">
+                <label>行业（如：民宿、餐饮、美容）</label>
+                <input type="text" id="industryInput" placeholder="例如：民宿">
+                <label>关键词（多个用逗号分隔）</label>
+                <input type="text" id="keywordsInput" placeholder="例如：海景,日出,赶海,包车">
+                <label>产品/服务名称</label>
+                <input type="text" id="productInput" placeholder="例如：山予海民宿">
+                <label>其他补充说明（可选）</label>
+                <textarea id="extraNote" rows="3" placeholder="例如：我们的特色是..."></textarea>
+                
+                <!-- 风格管理 -->
+                <label style="margin-top:15px;">📝 快捷生成风格（可自定义）</label>
+                <div id="styleList"></div>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button onclick="addStyle()">➕ 添加快捷生成</button>
+                    <button onclick="removeLastStyle()" style="background:#e74c3c;">🗑 删除最后一个</button>
+                </div>
+                <button onclick="saveSettings()">💾 保存全部设置</button>
+                <p id="settingsMsg" style="text-align:center; color:green;"></p>
+            </div>
+        </div>
+
+        <!-- 修改密码卡片 -->
         <div class="card">
-            <h2>🛠️ 店铺设置</h2>
-            <label>行业（如：民宿、餐饮、美容）</label>
-            <input type="text" id="industryInput" placeholder="例如：民宿">
-            <label>关键词（多个用逗号分隔）</label>
-            <input type="text" id="keywordsInput" placeholder="例如：海景,日出,赶海,包车">
-            <label>产品/服务名称</label>
-            <input type="text" id="productInput" placeholder="例如：山予海民宿">
-            <label>其他补充说明（可选）</label>
-            <textarea id="extraNote" rows="3" placeholder="例如：我们的特色是..."></textarea>
-            <button onclick="saveSettings()">💾 保存设置</button>
-            <p id="settingsMsg" style="text-align:center; color:green;"></p>
+            <h2>🔑 修改密码</h2>
+            <input type="password" id="oldPassword" placeholder="当前密码">
+            <input type="password" id="newPassword1" placeholder="新密码">
+            <input type="password" id="newPassword2" placeholder="再次输入新密码">
+            <button onclick="changePassword()">✅ 修改密码</button>
+            <p id="changePwdMsg" style="text-align:center; color:green;"></p>
         </div>
     </div>
 
-    <!-- 联系管理员弹窗 -->
+    <!-- 弹窗部分保持不变（联系管理员、流水、价目表） -->
     <div id="contactModal" class="modal-overlay">
         <div class="modal-content">
             <h3>📞 联系管理员</h3>
-            <div id="contactQrContainer">
-                <img id="contactQrImage" src="" alt="管理员微信二维码" />
-            </div>
+            <div id="contactQrContainer"><img id="contactQrImage" src="" alt="管理员微信二维码" /></div>
             <div id="contactInfo" style="margin: 10px 0; font-size: 14px;"></div>
             <button onclick="document.getElementById('contactModal').style.display='none'" style="background:#ccc;color:#333;width:auto;margin-top:10px;">关闭</button>
         </div>
     </div>
 
-    <!-- 流水弹窗 -->
     <div id="flowModal" class="modal-overlay">
         <div class="modal-content">
             <h3 id="flowTitle">流水明细</h3>
@@ -113,7 +138,6 @@
         </div>
     </div>
 
-    <!-- 价目表弹窗 -->
     <div id="pricingModal" class="modal-overlay">
         <div class="modal-content">
             <h3>💎 算力价目表</h3>
@@ -128,6 +152,7 @@
 
     <script>
         const API_BASE = '/api/merchant';
+        let currentStyles = []; // 当前风格列表
 
         // 初始化
         (function() {
@@ -141,6 +166,18 @@
                 document.getElementById('dashboard').classList.add('hidden');
             }
         })();
+
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            const card = document.getElementById('settingsCard');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                card.classList.remove('collapsed');
+            } else {
+                panel.style.display = 'none';
+                card.classList.add('collapsed');
+            }
+        }
 
         async function login() {
             const id = document.getElementById('merchantId').value.trim();
@@ -194,16 +231,67 @@
                 document.getElementById('keywordsInput').value = data.settings.keywords || '';
                 document.getElementById('productInput').value = data.settings.product || '';
                 document.getElementById('extraNote').value = data.settings.extraNote || '';
+                currentStyles = data.settings.styles || [];
+                renderStyles();
+            } else {
+                currentStyles = [];
+                renderStyles();
             }
+        }
+
+        function renderStyles() {
+            const container = document.getElementById('styleList');
+            container.innerHTML = '';
+            currentStyles.forEach((style, index) => {
+                const div = document.createElement('div');
+                div.className = 'style-item';
+                div.innerHTML = `
+                    <input type="text" value="${style}" onchange="updateStyle(${index}, this.value)" placeholder="风格名称">
+                    <button onclick="deleteStyle(${index})">删除</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function addStyle() {
+            currentStyles.push('');
+            renderStyles();
+            document.querySelectorAll('#styleList .style-item input')[currentStyles.length-1].focus();
+        }
+
+        function removeLastStyle() {
+            if (currentStyles.length === 0) return;
+            currentStyles.pop();
+            renderStyles();
+        }
+
+        function updateStyle(index, value) {
+            currentStyles[index] = value.trim();
+        }
+
+        function deleteStyle(index) {
+            currentStyles.splice(index, 1);
+            renderStyles();
         }
 
         async function saveSettings() {
             const token = localStorage.getItem('merchant_token');
+            // 收集所有风格输入框的值，过滤空项
+            const inputs = document.querySelectorAll('#styleList .style-item input');
+            const styles = [];
+            inputs.forEach(input => {
+                const val = input.value.trim();
+                if (val) styles.push(val);
+            });
+            currentStyles = styles; // 更新本地
+            renderStyles();
+
             const settings = {
                 industry: document.getElementById('industryInput').value.trim(),
                 keywords: document.getElementById('keywordsInput').value.trim(),
                 product: document.getElementById('productInput').value.trim(),
-                extraNote: document.getElementById('extraNote').value.trim()
+                extraNote: document.getElementById('extraNote').value.trim(),
+                styles: styles
             };
             const res = await fetch(`${API_BASE}/save-settings`, {
                 method: 'POST',
@@ -215,9 +303,33 @@
             });
             const data = await res.json();
             if (data.success) {
-                document.getElementById('settingsMsg').innerText = '✅ 设置已保存，扫码生成将使用自定义信息';
+                document.getElementById('settingsMsg').innerText = '✅ 设置已保存';
             } else {
                 document.getElementById('settingsMsg').innerText = '❌ 保存失败：' + (data.error || '未知错误');
+            }
+        }
+
+        async function changePassword() {
+            const token = localStorage.getItem('merchant_token');
+            const oldPwd = document.getElementById('oldPassword').value;
+            const new1 = document.getElementById('newPassword1').value;
+            const new2 = document.getElementById('newPassword2').value;
+            if (!oldPwd || !new1 || !new2) return alert('请填写所有密码字段');
+            if (new1 !== new2) return alert('两次输入的新密码不一致');
+            const res = await fetch(`${API_BASE}/change-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ oldPassword: oldPwd, newPassword: new1 })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('changePwdMsg').innerText = '✅ 密码修改成功，请重新登录';
+                setTimeout(logout, 2000);
+            } else {
+                document.getElementById('changePwdMsg').innerText = '❌ ' + (data.error || '修改失败');
             }
         }
 
