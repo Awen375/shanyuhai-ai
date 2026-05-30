@@ -17,11 +17,21 @@
         button.danger { background: #e74c3c; }
         button.warning { background: #f39c12; }
         button.success { background: #27ae60; }
+        button.info { background: #3498db; }
         .flex-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
         .label { font-weight: 600; min-width: 80px; }
         .hidden { display: none; }
         #loginBox { max-width: 350px; margin: 100px auto; }
         .stat-box { background: #f0f8ff; border-radius: 12px; padding: 15px; margin: 15px 0; }
+        /* 模态框 */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999;
+            align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: white; border-radius: 20px; padding: 25px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -81,11 +91,22 @@
         </div>
     </div>
 
+    <!-- 流水弹窗 -->
+    <div id="flowModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>🧮 算力流水 <span id="flowMerchantName"></span></h3>
+            <table>
+                <thead><tr><th>时间</th><th>类型</th><th>变动</th><th>变动后算力</th><th>备注</th></tr></thead>
+                <tbody id="flowTableBody"></tbody>
+            </table>
+            <button onclick="document.getElementById('flowModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
+        </div>
+    </div>
+
     <script>
-        const ADMIN_PASSWORD = 'zjm1314520';  // 超级密码
+        const ADMIN_PASSWORD = 'zjm1314520';
         const token = () => localStorage.getItem('admin_token');
 
-        // 登录
         function login(){
             if(document.getElementById('password').value === ADMIN_PASSWORD) {
                 localStorage.setItem('admin_token', ADMIN_PASSWORD);
@@ -115,19 +136,19 @@
             const data = await res.json();
             const tbody = document.querySelector('#merchantTable tbody');
             tbody.innerHTML = '';
-            // 填充统计下拉框
             const statSelect = document.getElementById('statMerchantSelect');
             statSelect.innerHTML = '<option value="">-- 选择商家 --</option>';
 
             data.merchants.forEach(m => {
-                const status = m.status === 'banned' ? '🚫已封' : '✅正常';
+                const statusText = m.status === 'banned' ? '🚫已封' : '✅正常';
                 tbody.innerHTML += `<tr>
                     <td>${m.id}</td>
                     <td>${m.name || ''}</td>
                     <td>${m.balance}</td>
-                    <td>${status}</td>
+                    <td>${statusText}</td>
                     <td>
                         <button onclick="rechargeMerchant('${m.id}')">💰充值</button>
+                        <button onclick="showFlow('${m.id}')" class="info">📈流水</button>
                         <button onclick="deleteMerchant('${m.id}')" class="danger">🗑删除</button>
                         ${m.status === 'banned' 
                             ? `<button onclick="toggleBan('${m.id}', false)" class="success">🔓解封</button>`
@@ -139,7 +160,6 @@
             });
         }
 
-        // 新增商家
         async function addMerchant(){
             const id = document.getElementById('newMerchantId').value.trim();
             const name = document.getElementById('newMerchantName').value.trim();
@@ -154,9 +174,8 @@
             await loadMerchants();
         }
 
-        // 充值
         async function rechargeMerchant(id){
-            const newBalance = prompt('输入新的算力余额（当前余额将被覆盖）：');
+            const newBalance = prompt('输入新的算力余额（将覆盖当前余额）：');
             if(newBalance !== null && !isNaN(newBalance)) {
                 await fetch('/api/admin/merchants', {
                     method: 'PUT',
@@ -167,7 +186,6 @@
             }
         }
 
-        // 删除
         async function deleteMerchant(id){
             if(!confirm('确定删除商家 ' + id + '？此操作不可恢复。')) return;
             await fetch('/api/admin/merchants', {
@@ -178,7 +196,6 @@
             await loadMerchants();
         }
 
-        // 封号/解封
         async function toggleBan(id, ban){
             const action = ban ? '封号' : '解封';
             if(!confirm(`确定${action}商家 ${id} 吗？`)) return;
@@ -190,7 +207,36 @@
             await loadMerchants();
         }
 
-        // ===== 商家使用统计 =====
+        // ===== 流水 =====
+        async function showFlow(merchantId){
+            const res = await fetch(`/api/admin/merchants?action=flow&merchant=${merchantId}`, {
+                headers: { 'x-admin-token': token() }
+            });
+            const data = await res.json();
+            document.getElementById('flowMerchantName').innerText = merchantId;
+            const tbody = document.getElementById('flowTableBody');
+            tbody.innerHTML = '';
+            if(!data.flows || data.flows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">暂无流水</td></tr>';
+            } else {
+                data.flows.forEach(f => {
+                    const time = new Date(f.time).toLocaleString('zh-CN');
+                    const typeMap = { 'consume': '🔻消耗', 'recharge': '💰充值', 'initial': '🆕初始' };
+                    const typeText = typeMap[f.type] || f.type;
+                    const amount = f.type === 'consume' ? `-${f.amount}` : `+${f.amount}`;
+                    tbody.innerHTML += `<tr>
+                        <td>${time}</td>
+                        <td>${typeText}</td>
+                        <td>${amount}</td>
+                        <td>${f.balanceAfter}</td>
+                        <td>${f.note || ''}</td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('flowModal').style.display = 'flex';
+        }
+
+        // ===== 统计 =====
         async function queryStats(){
             const merchantId = document.getElementById('statMerchantSelect').value;
             if(!merchantId) return alert('请选择商家');
@@ -203,14 +249,15 @@
             });
             const data = await res.json();
             if(res.ok) {
-                document.getElementById('statResult').innerHTML = `
-                    <p>📅 <b>${start} ~ ${end}</b></p>
-                    <p>🧮 总生成次数：<b>${data.total}</b></p>
-                    <h4>每日明细：</h4>
-                    <table><tr><th>日期</th><th>次数</th></tr>
-                    ${Object.entries(data.daily||{}).map(([date,count]) => `<tr><td>${date}</td><td>${count}</td></tr>`).join('')}
-                    </table>
-                `;
+                let html = `<p>📅 <b>${start} ~ ${end}</b></p><p>🧮 总生成次数：<b>${data.total}</b></p>`;
+                if(Object.keys(data.daily||{}).length > 0) {
+                    html += '<h4>每日明细：</h4><table><tr><th>日期</th><th>次数</th></tr>';
+                    Object.entries(data.daily).forEach(([date,count]) => {
+                        html += `<tr><td>${date}</td><td>${count}</td></tr>`;
+                    });
+                    html += '</table>';
+                }
+                document.getElementById('statResult').innerHTML = html;
             } else {
                 document.getElementById('statResult').innerText = '查询失败：' + data.error;
             }
