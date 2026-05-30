@@ -47,6 +47,7 @@
             <button onclick="logout()" style="background:#ccc;color:#333;">退出</button>
         </div>
 
+        <!-- 商家管理 -->
         <div class="card">
             <h2>🏪 商家管理</h2>
             <div class="flex-row">
@@ -62,51 +63,83 @@
             </table>
         </div>
 
+        <!-- 联系方式设置（可折叠） -->
         <div class="card">
             <h2 onclick="toggleContact()">📞 联系方式设置（点击展开/折叠）</h2>
             <div id="contactPanel" style="display:none;">
-                <div class="flex-row"><span class="label">微信二维码URL：</span><input type="text" id="contactQrcode" style="width:300px;"></div>
-                <div class="flex-row"><span class="label">管理员电话：</span><input type="text" id="contactPhone" style="width:200px;"></div>
-                <div class="flex-row"><span class="label">管理员微信：</span><input type="text" id="contactWechat" style="width:200px;"></div>
-                <div class="flex-row"><span class="label">其他说明：</span><input type="text" id="contactExtra" style="width:300px;"></div>
+                <div class="flex-row">
+                    <span class="label">微信二维码URL：</span>
+                    <input type="text" id="contactQrcode" placeholder="https://example.com/qr.jpg" style="width:300px;">
+                </div>
+                <div class="flex-row">
+                    <span class="label">管理员电话：</span>
+                    <input type="text" id="contactPhone" placeholder="13800138000" style="width:200px;">
+                </div>
+                <div class="flex-row">
+                    <span class="label">管理员微信：</span>
+                    <input type="text" id="contactWechat" placeholder="shanyuhai_kefu" style="width:200px;">
+                </div>
+                <div class="flex-row">
+                    <span class="label">其他说明：</span>
+                    <input type="text" id="contactExtra" placeholder="工作时间 9:00-21:00" style="width:300px;">
+                </div>
                 <button onclick="saveContact()">💾 保存联系方式</button>
             </div>
         </div>
 
+        <!-- 价目表设置 -->
         <div class="card">
             <h2 onclick="togglePricing()">💎 算力价目表设置（点击展开/折叠）</h2>
             <div id="pricingPanel" style="display:none;">
                 <div id="pricingItemsContainer"></div>
                 <button onclick="addPricingRow()">+ 添加一行</button>
-                <div class="flex-row" style="margin-top:10px;"><span class="label">备注说明：</span><input type="text" id="pricingNoteInput" style="width:300px;"></div>
+                <div class="flex-row" style="margin-top:10px;">
+                    <span class="label">备注说明：</span>
+                    <input type="text" id="pricingNoteInput" placeholder="例如：请联系管理员充值" style="width:300px;">
+                </div>
                 <button onclick="savePricing()">💾 保存价目表</button>
             </div>
         </div>
 
+        <!-- 商家使用统计查询 -->
         <div class="card">
             <h2>📊 商家使用统计</h2>
             <div class="flex-row">
-                <span class="label">选择商家：</span><select id="statMerchantSelect"><option value="">-- 请先选择商家 --</option></select>
-                <span class="label">开始日期：</span><input type="date" id="statStart">
-                <span class="label">结束日期：</span><input type="date" id="statEnd">
+                <span class="label">选择商家：</span>
+                <select id="statMerchantSelect">
+                    <option value="">-- 请先选择商家 --</option>
+                </select>
+                <span class="label">开始日期：</span>
+                <input type="date" id="statStart">
+                <span class="label">结束日期：</span>
+                <input type="date" id="statEnd">
                 <button onclick="queryStats()">查询</button>
             </div>
             <div id="statResult" class="stat-box">请选择商家和日期范围后查询</div>
         </div>
 
+        <!-- 使用记录总览 -->
         <div class="card">
             <h2>📋 最近使用记录 <button onclick="loadRecords()" style="float:right;">🔄 刷新</button></h2>
-            <table id="recordsTable"><thead><tr><th>时间</th><th>IP</th><th>商家</th><th>风格</th><th>补充</th></tr></thead><tbody></tbody></table>
+            <table id="recordsTable">
+                <thead><tr><th>时间</th><th>IP</th><th>商家</th><th>风格</th><th>补充</th></tr></thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 
+    <!-- 商家详情弹窗 -->
     <div id="merchantDetailModal" class="modal-overlay">
         <div class="modal-content">
             <h3>商家详情 - <span id="detailMerchantId"></span></h3>
             <div id="detailSettings"></div>
-            <div style="margin-top:15px;"><strong>密码：</strong> <span id="detailPassword"></span> <button onclick="copyPassword()">📋 复制</button></div>
             <div style="margin-top:15px;">
-                <input type="password" id="newMerchantPassword" placeholder="新密码（留空不修改）" style="width:200px;">
+                <strong>密码：</strong> <span id="detailPassword"></span>
+                <button onclick="copyPassword()">📋 复制</button>
+            </div>
+            <div style="margin-top:15px;">
+                <label for="newMerchantPassword">新密码（留空不修改）</label>
+                <input type="password" id="newMerchantPassword" placeholder="新密码" style="width:200px;">
                 <button onclick="changeMerchantPassword()">🔑 修改密码</button>
                 <button onclick="loginAsMerchant()" class="success">🚀 直接登录商家后台</button>
             </div>
@@ -114,20 +147,28 @@
         </div>
     </div>
 
+    <!-- 流水弹窗 -->
     <div id="flowModal" class="modal-overlay">
         <div class="modal-content" style="max-width:600px;">
             <h3>🧮 算力流水 <span id="flowMerchantName"></span></h3>
-            <table><thead><tr><th>时间</th><th>类型</th><th>变动</th><th>变动后算力</th><th>备注</th></tr></thead><tbody id="flowTableBody"></tbody></table>
+            <table>
+                <thead><tr><th>时间</th><th>类型</th><th>变动</th><th>变动后算力</th><th>备注</th></tr></thead>
+                <tbody id="flowTableBody"></tbody>
+            </table>
             <button onclick="document.getElementById('flowModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
         </div>
     </div>
 
+    <!-- 充值/扣除弹窗 -->
     <div id="rechargeModal" class="modal-overlay">
         <div class="modal-content">
             <h3>💳 调整算力</h3>
             <input type="hidden" id="rechargeMerchantId">
             <label for="rechargeType">类型：</label>
-            <select id="rechargeType"><option value="add">➕ 充值</option><option value="subtract">➖ 扣除</option></select>
+            <select id="rechargeType">
+                <option value="add">➕ 充值算力</option>
+                <option value="subtract">➖ 扣除算力</option>
+            </select>
             <label for="rechargeAmount">金额（算力）：</label>
             <input type="number" id="rechargeAmount" min="1" value="10">
             <label for="rechargeNote">备注：</label>
@@ -143,30 +184,322 @@
         const ADMIN_PASSWORD = 'zjm1314520';
         const token = () => localStorage.getItem('admin_token');
 
-        function login(){
-            if(document.getElementById('password').value === ADMIN_PASSWORD) {
+        function login() {
+            if (document.getElementById('password').value === ADMIN_PASSWORD) {
                 localStorage.setItem('admin_token', ADMIN_PASSWORD);
                 document.getElementById('loginBox').classList.add('hidden');
                 document.getElementById('mainPanel').classList.remove('hidden');
                 loadAll();
-            } else { document.getElementById('loginError').innerText = '密码错误'; }
+            } else {
+                document.getElementById('loginError').innerText = '密码错误';
+            }
         }
-        function logout(){ localStorage.removeItem('admin_token'); location.reload(); }
+        function logout() { localStorage.removeItem('admin_token'); location.reload(); }
 
-        if(token() === ADMIN_PASSWORD) {
+        if (token() === ADMIN_PASSWORD) {
             document.getElementById('loginBox').classList.add('hidden');
             document.getElementById('mainPanel').classList.remove('hidden');
             loadAll();
         }
 
-        async function loadAll() { await loadMerchants(); await loadRecords(); await loadContact(); await loadPricing(); }
+        async function loadAll() {
+            await loadMerchants();
+            await loadRecords();
+            await loadContact();
+            await loadPricing();
+        }
 
-        function toggleContact() { document.getElementById('contactPanel').style.display = document.getElementById('contactPanel').style.display === 'none' ? '' : 'none'; }
-        function togglePricing() { document.getElementById('pricingPanel').style.display = document.getElementById('pricingPanel').style.display === 'none' ? '' : 'none'; }
+        function toggleContact() {
+            const panel = document.getElementById('contactPanel');
+            panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
+        function togglePricing() {
+            const panel = document.getElementById('pricingPanel');
+            panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        }
 
-        // 商家管理相关函数（loadMerchants, addMerchant, openRecharge, submitRecharge, deleteMerchant, toggleBan, showFlow, queryStats, loadRecords, loadContact, saveContact, loadPricing, savePricing 等全部保持原样）
-        // 此处为简洁，将之前整合好的函数直接粘贴即可，因代码过多不再重复，但请使用上一轮完整版 admin.html 中的对应函数。
-        // 商家详情相关函数 showDetail, changeMerchantPassword, copyPassword, loginAsMerchant 亦保持一致。
+        // ---------- 商家列表 ----------
+        async function loadMerchants() {
+            const res = await fetch('/api/admin/merchants', { headers: { 'x-admin-token': token() } });
+            const data = await res.json();
+            const tbody = document.querySelector('#merchantTable tbody');
+            tbody.innerHTML = '';
+            const statSelect = document.getElementById('statMerchantSelect');
+            statSelect.innerHTML = '<option value="">-- 选择商家 --</option>';
+
+            data.merchants.forEach(m => {
+                const statusText = m.status === 'banned' ? '🚫已封' : '✅正常';
+                tbody.innerHTML += `<tr>
+                    <td>${m.id}</td>
+                    <td>${m.name || ''}</td>
+                    <td>${m.balance}</td>
+                    <td>${statusText}</td>
+                    <td>
+                        <button onclick="openRecharge('${m.id}')">💳 充/扣</button>
+                        <button onclick="showFlow('${m.id}')">📈流水</button>
+                        <button onclick="showDetail('${m.id}')" class="info">🔍详情</button>
+                        <button onclick="deleteMerchant('${m.id}')" class="danger">🗑删除</button>
+                        ${m.status === 'banned' 
+                            ? `<button onclick="toggleBan('${m.id}', false)" class="success">🔓解封</button>`
+                            : `<button onclick="toggleBan('${m.id}', true)" class="warning">🚫封号</button>`
+                        }
+                    </td>
+                </tr>`;
+                statSelect.innerHTML += `<option value="${m.id}">${m.id} - ${m.name||''}</option>`;
+            });
+        }
+
+        async function addMerchant() {
+            const id = document.getElementById('newMerchantId').value.trim();
+            const name = document.getElementById('newMerchantName').value.trim();
+            const password = document.getElementById('newMerchantPass').value;
+            const balance = parseInt(document.getElementById('newMerchantBalance').value) || 100;
+            if (!id || !password) return alert('ID和密码必填');
+            await fetch('/api/admin/merchants', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id, name, password, balance })
+            });
+            await loadMerchants();
+        }
+
+        function openRecharge(id) {
+            document.getElementById('rechargeMerchantId').value = id;
+            document.getElementById('rechargeAmount').value = 10;
+            document.getElementById('rechargeNote').value = '';
+            document.getElementById('rechargeModal').style.display = 'flex';
+        }
+
+        async function submitRecharge() {
+            const id = document.getElementById('rechargeMerchantId').value;
+            const amount = parseInt(document.getElementById('rechargeAmount').value);
+            const type = document.getElementById('rechargeType').value;
+            const note = document.getElementById('rechargeNote').value.trim();
+            if (!amount || amount <= 0) return alert('请输入有效金额');
+            const res = await fetch('/api/admin/merchants', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id, amount, type, note })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('操作成功');
+                document.getElementById('rechargeModal').style.display = 'none';
+                await loadMerchants();
+            } else {
+                alert('操作失败：' + (data.error || '未知错误'));
+            }
+        }
+
+        async function deleteMerchant(id) {
+            if (!confirm('确定删除商家 ' + id + '？此操作不可恢复。')) return;
+            await fetch('/api/admin/merchants', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id })
+            });
+            await loadMerchants();
+        }
+
+        async function toggleBan(id, ban) {
+            if (!confirm(`确定${ban ? '封号' : '解封'}商家 ${id} 吗？`)) return;
+            await fetch('/api/admin/merchants', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id, status: ban ? 'banned' : 'active' })
+            });
+            await loadMerchants();
+        }
+
+        async function showFlow(merchantId) {
+            const res = await fetch(`/api/admin/merchants?action=flow&merchant=${merchantId}`, {
+                headers: { 'x-admin-token': token() }
+            });
+            const data = await res.json();
+            document.getElementById('flowMerchantName').innerText = merchantId;
+            const tbody = document.getElementById('flowTableBody');
+            tbody.innerHTML = '';
+            if (!data.flows || data.flows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">暂无流水</td></tr>';
+            } else {
+                data.flows.forEach(f => {
+                    const time = new Date(f.time).toLocaleString('zh-CN');
+                    const typeMap = { 'consume': '🔻消耗', 'recharge': '💰充值', 'initial': '🆕初始', 'admin_add': '➕管理员添加', 'admin_subtract': '➖管理员扣除' };
+                    const typeText = typeMap[f.type] || f.type;
+                    const amount = (f.type === 'consume' || f.type === 'admin_subtract') ? `-${f.amount}` : `+${f.amount}`;
+                    tbody.innerHTML += `<tr><td>${time}</td><td>${typeText}</td><td>${amount}</td><td>${f.balanceAfter}</td><td>${f.note || ''}</td></tr>`;
+                });
+            }
+            document.getElementById('flowModal').style.display = 'flex';
+        }
+
+        async function queryStats() {
+            const merchantId = document.getElementById('statMerchantSelect').value;
+            if (!merchantId) return alert('请选择商家');
+            const start = document.getElementById('statStart').value;
+            const end = document.getElementById('statEnd').value;
+            if (!start || !end) return alert('请选择起止日期');
+            const res = await fetch(`/api/admin/merchants?action=stats&merchant=${merchantId}&start=${start}&end=${end}`, {
+                headers: { 'x-admin-token': token() }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                let html = `<p>📅 <b>${start} ~ ${end}</b></p><p>🧮 总生成次数：<b>${data.total}</b></p>`;
+                if (Object.keys(data.daily || {}).length > 0) {
+                    html += '<h4>每日明细：</h4><table><tr><th>日期</th><th>次数</th></tr>';
+                    Object.entries(data.daily).forEach(([date, count]) => {
+                        html += `<tr><td>${date}</td><td>${count}</td></tr>`;
+                    });
+                    html += '</table>';
+                }
+                document.getElementById('statResult').innerHTML = html;
+            } else {
+                document.getElementById('statResult').innerText = '查询失败：' + data.error;
+            }
+        }
+
+        async function loadRecords() {
+            const tbody = document.querySelector('#recordsTable tbody');
+            tbody.innerHTML = '<tr><td colspan="5">加载中...</td></tr>';
+            const res = await fetch('/api/admin', { headers: { 'x-admin-token': token() } });
+            const data = await res.json();
+            if (!res.ok) { tbody.innerHTML = `<tr><td colspan="5">错误: ${data.error}</td></tr>`; return; }
+            tbody.innerHTML = '';
+            if (data.records.length === 0) { tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>'; return; }
+            data.records.forEach(r => {
+                const time = new Date(r.time).toLocaleString('zh-CN');
+                tbody.innerHTML += `<tr><td>${time}</td><td>${r.ip || ''}</td><td>${r.merchant || '无'}</td><td>${r.style}</td><td>${r.prompt || ''}</td></tr>`;
+            });
+        }
+
+        // ---------- 联系方式 ----------
+        async function loadContact() {
+            const res = await fetch('/api/admin/contact');
+            const data = await res.json();
+            document.getElementById('contactQrcode').value = data.qrcode_url || '';
+            document.getElementById('contactPhone').value = data.phone || '';
+            document.getElementById('contactWechat').value = data.wechat || '';
+            document.getElementById('contactExtra').value = data.extra || '';
+        }
+
+        async function saveContact() {
+            const qrcode_url = document.getElementById('contactQrcode').value.trim();
+            const phone = document.getElementById('contactPhone').value.trim();
+            const wechat = document.getElementById('contactWechat').value.trim();
+            const extra = document.getElementById('contactExtra').value.trim();
+            await fetch('/api/admin/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ qrcode_url, phone, wechat, extra })
+            });
+            alert('联系方式已保存');
+        }
+
+        // ---------- 价目表 ----------
+        async function loadPricing() {
+            const res = await fetch('/api/admin/pricing', { headers: { 'x-admin-token': token() } });
+            const data = await res.json();
+            const container = document.getElementById('pricingItemsContainer');
+            container.innerHTML = '';
+            data.items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'flex-row';
+                row.innerHTML = `
+                    <span>算力：<input type="number" value="${item.amount}" class="pricing-amount" style="width:80px;"></span>
+                    <span>价格：<input type="text" value="${item.price}" class="pricing-price" style="width:80px;"></span>
+                    <button onclick="this.parentElement.remove()" class="danger">删除</button>
+                `;
+                container.appendChild(row);
+            });
+            document.getElementById('pricingNoteInput').value = data.note || '';
+        }
+
+        function addPricingRow() {
+            const container = document.getElementById('pricingItemsContainer');
+            const row = document.createElement('div');
+            row.className = 'flex-row';
+            row.innerHTML = `
+                <span>算力：<input type="number" value="10" class="pricing-amount" style="width:80px;"></span>
+                <span>价格：<input type="text" value="¥1" class="pricing-price" style="width:80px;"></span>
+                <button onclick="this.parentElement.remove()" class="danger">删除</button>
+            `;
+            container.appendChild(row);
+        }
+
+        async function savePricing() {
+            const amounts = document.querySelectorAll('.pricing-amount');
+            const prices = document.querySelectorAll('.pricing-price');
+            const items = [];
+            amounts.forEach((el, i) => {
+                const amount = parseInt(el.value);
+                const price = prices[i].value.trim();
+                if (amount && price) items.push({ amount, price });
+            });
+            const note = document.getElementById('pricingNoteInput').value.trim();
+            await fetch('/api/admin/pricing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ items, note })
+            });
+            alert('价目表已保存');
+        }
+
+        // ---------- 商家详情 ----------
+        let currentDetailId = null;
+        async function showDetail(id) {
+            currentDetailId = id;
+            document.getElementById('detailMerchantId').innerText = id;
+            const res = await fetch(`/api/admin/merchants?action=detail&id=${id}`, {
+                headers: { 'x-admin-token': token() }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('detailPassword').innerText = data.password;
+                const s = data.settings || {};
+                document.getElementById('detailSettings').innerHTML = `
+                    <p><b>行业：</b>${s.industry || '未设置'}</p>
+                    <p><b>关键词：</b>${s.keywords || '未设置'}</p>
+                    <p><b>产品：</b>${s.product || '未设置'}</p>
+                    <p><b>补充说明：</b>${s.extraNote || '未设置'}</p>
+                    <p><b>快捷风格：</b>${(s.styles || []).join(', ') || '默认'}</p>
+                `;
+                document.getElementById('newMerchantPassword').value = '';
+            } else {
+                alert('获取详情失败');
+            }
+            document.getElementById('merchantDetailModal').style.display = 'flex';
+        }
+
+        async function changeMerchantPassword() {
+            const newPass = document.getElementById('newMerchantPassword').value.trim();
+            if (!newPass) return alert('请输入新密码');
+            await fetch('/api/admin/merchants', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id: currentDetailId, password: newPass })
+            });
+            alert('密码已修改');
+            showDetail(currentDetailId);
+        }
+
+        function copyPassword() {
+            const pass = document.getElementById('detailPassword').innerText;
+            navigator.clipboard.writeText(pass).then(() => alert('密码已复制'));
+        }
+
+        async function loginAsMerchant() {
+            const res = await fetch('/api/admin/login-as-merchant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id: currentDetailId })
+            });
+            const data = await res.json();
+            if (data.url) {
+                window.open(data.url, '_blank');
+            } else {
+                alert('生成链接失败');
+            }
+        }
     </script>
 </body>
 </html>
