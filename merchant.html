@@ -6,7 +6,7 @@
     <title>山予海 · 商家后台</title>
     <style>
         body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-        .card { background: white; border-radius: 24px; padding: 30px; max-width: 420px; width: 100%; box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
+        .card { background: white; border-radius: 24px; padding: 30px; max-width: 450px; width: 100%; box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
         h2 { color: #0b4f6c; margin-bottom: 20px; }
         input, button { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; }
         button { background: #1e90ff; color: white; border: none; cursor: pointer; font-weight: 600; border-radius: 50px; }
@@ -14,17 +14,19 @@
         #qrImage { display: block; margin: 20px auto; max-width: 200px; }
         .hidden { display: none; }
         .open-link { color: #1e90ff; font-weight: 500; cursor: pointer; text-decoration: underline; }
-
-        /* 联系弹窗 */
+        .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-row button { flex: 1; padding: 10px; font-size: 14px; }
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999;
             align-items: center; justify-content: center;
         }
         .modal-content {
-            background: white; border-radius: 20px; padding: 25px; max-width: 380px; width: 90%; text-align: center;
+            background: white; border-radius: 20px; padding: 25px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;
         }
-        .modal-content img { max-width: 200px; margin: 15px auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+        th, td { border-bottom: 1px solid #eee; padding: 8px 6px; text-align: left; }
+        th { background: #f8fafc; }
     </style>
 </head>
 <body>
@@ -42,10 +44,15 @@
     <div id="dashboard" class="card hidden">
         <h2>🌊 山予海商家中心</h2>
         <div class="info">🧮 剩余算力：<strong id="balanceSpan"></strong></div>
-        <p>专属推广二维码（客人扫码生成好评，每次消耗2算力）</p>
+        <div class="btn-row">
+            <button onclick="showFlow('consume')" style="background:#3498db;">📊 算力明细</button>
+            <button onclick="showFlow('recharge')" style="background:#27ae60;">💰 充值记录</button>
+        </div>
+        <p style="margin-top:15px;">专属推广二维码（客人扫码生成好评，每次消耗2算力）</p>
         <img id="qrImage" />
         <p style="text-align:center; color:#888; word-break:break-all;">链接: <span id="qrUrl"></span></p>
-        <button onclick="logout()">退出登录</button>
+        <button onclick="refreshQR()">🔄 刷新二维码（旧码失效）</button>
+        <button onclick="logout()" style="background:#ccc;color:#333;">退出登录</button>
     </div>
 
     <!-- 联系管理员弹窗 -->
@@ -57,6 +64,18 @@
             </div>
             <div id="contactInfo" style="margin: 10px 0; font-size: 14px;"></div>
             <button onclick="document.getElementById('contactModal').style.display='none'" style="background:#ccc;color:#333;width:auto;margin-top:10px;">关闭</button>
+        </div>
+    </div>
+
+    <!-- 流水弹窗 -->
+    <div id="flowModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="flowTitle">流水明细</h3>
+            <table>
+                <thead><tr><th>时间</th><th>类型</th><th>变动</th><th>余额</th><th>备注</th></tr></thead>
+                <tbody id="flowTableBody"></tbody>
+            </table>
+            <button onclick="document.getElementById('flowModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
         </div>
     </div>
 
@@ -89,15 +108,61 @@
             const data = await res.json();
             if(data.id) {
                 document.getElementById('balanceSpan').innerText = data.balance;
-                const url = `https://www.shanyh.top?merchant=${data.id}`;
+                // 生成含token的二维码链接
+                const url = `https://www.shanyh.top?merchant=${data.id}&token=${data.token_val}`;
                 document.getElementById('qrUrl').innerText = url;
                 document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
                 document.getElementById('loginBox').classList.add('hidden');
                 document.getElementById('dashboard').classList.remove('hidden');
             } else {
-                alert('登录已过期，请重新登录');
+                alert('登录已过期');
                 logout();
             }
+        }
+
+        async function refreshQR(){
+            const token = localStorage.getItem('merchant_token');
+            const res = await fetch(`${API_BASE}/refresh`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert('二维码已刷新，旧码立即失效');
+                showDashboard(); // 重新加载显示新码
+            } else {
+                alert('刷新失败：' + data.error);
+            }
+        }
+
+        async function showFlow(filterType){
+            const token = localStorage.getItem('merchant_token');
+            const res = await fetch(`${API_BASE}/flow`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            const tbody = document.getElementById('flowTableBody');
+            tbody.innerHTML = '';
+            const filtered = filterType ? data.flows.filter(f => f.type === filterType) : data.flows;
+            if(filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>';
+            } else {
+                filtered.forEach(f => {
+                    const time = new Date(f.time).toLocaleString('zh-CN');
+                    const typeMap = { 'consume': '🔻消耗', 'recharge': '💰充值', 'initial': '🆕初始' };
+                    const typeText = typeMap[f.type] || f.type;
+                    const amount = f.type === 'consume' ? `-${f.amount}` : `+${f.amount}`;
+                    tbody.innerHTML += `<tr>
+                        <td>${time}</td>
+                        <td>${typeText}</td>
+                        <td>${amount}</td>
+                        <td>${f.balanceAfter}</td>
+                        <td>${f.note || ''}</td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('flowTitle').innerText = filterType === 'consume' ? '算力消耗明细' : (filterType === 'recharge' ? '充值记录' : '全部流水');
+            document.getElementById('flowModal').style.display = 'flex';
         }
 
         function logout(){
@@ -106,31 +171,23 @@
             location.reload();
         }
 
-        // 打开联系弹窗，从 API 获取信息
         async function openContact(){
-            const modal = document.getElementById('contactModal');
-            modal.style.display = 'flex';
-            try {
-                const res = await fetch('/api/admin/contact');
-                const data = await res.json();
-                // 微信二维码
-                const qrImg = document.getElementById('contactQrImage');
-                if(data.qrcode_url) {
-                    qrImg.src = data.qrcode_url;
-                    document.getElementById('contactQrContainer').style.display = '';
-                } else {
-                    document.getElementById('contactQrContainer').style.display = 'none';
-                }
-                // 文字联系方式
-                let infoHtml = '';
-                if(data.phone) infoHtml += `<p>📱 电话：${data.phone}</p>`;
-                if(data.wechat) infoHtml += `<p>💬 微信：${data.wechat}</p>`;
-                if(data.extra) infoHtml += `<p>${data.extra}</p>`;
-                if(!infoHtml) infoHtml = '<p>暂无联系方式，请稍后再试</p>';
-                document.getElementById('contactInfo').innerHTML = infoHtml;
-            } catch(e) {
-                document.getElementById('contactInfo').innerHTML = '<p>获取联系方式失败</p>';
+            document.getElementById('contactModal').style.display = 'flex';
+            const res = await fetch('/api/admin/contact');
+            const data = await res.json();
+            const qrImg = document.getElementById('contactQrImage');
+            if(data.qrcode_url) {
+                qrImg.src = data.qrcode_url;
+                document.getElementById('contactQrContainer').style.display = '';
+            } else {
+                document.getElementById('contactQrContainer').style.display = 'none';
             }
+            let infoHtml = '';
+            if(data.phone) infoHtml += `<p>📱 电话：${data.phone}</p>`;
+            if(data.wechat) infoHtml += `<p>💬 微信：${data.wechat}</p>`;
+            if(data.extra) infoHtml += `<p>${data.extra}</p>`;
+            if(!infoHtml) infoHtml = '<p>暂无联系方式</p>';
+            document.getElementById('contactInfo').innerHTML = infoHtml;
         }
 
         if(localStorage.getItem('merchant_token')) {
