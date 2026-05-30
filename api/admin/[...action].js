@@ -45,24 +45,34 @@ export default async function handler(req, res) {
             return true;
         };
 
-        // 公开接口：联系方式读取
+        // 公开接口：联系方式
         if (action === 'contact' && req.method === 'GET') {
-            const dataStr = await redis.get('config:contact');
-            const data = dataStr ? JSON.parse(dataStr) : {};
-            return res.status(200).json(data);
+            try {
+                const dataStr = await redis.get('config:contact');
+                const data = dataStr ? JSON.parse(dataStr) : {};
+                return res.status(200).json(data);
+            } catch (e) {
+                return res.status(500).json({ error: '读取联系方式失败：' + e.message });
+            }
         }
 
         // 日志列表
         if (action === '' || action === 'logs') {
             if (!checkAdmin()) return;
-            const keys = await redis.keys('log:*');
-            const records = [];
-            for (const key of keys) {
-                const raw = await redis.get(key);
-                if (raw) { try { records.push(JSON.parse(raw)); } catch(e){} }
+            try {
+                const keys = await redis.keys('log:*');
+                const records = [];
+                for (const key of keys) {
+                    const raw = await redis.get(key);
+                    if (raw) {
+                        try { records.push(JSON.parse(raw)); } catch (e) {}
+                    }
+                }
+                records.sort((a, b) => new Date(b.time) - new Date(a.time));
+                return res.status(200).json({ records: records.slice(0, 50) });
+            } catch (e) {
+                return res.status(500).json({ error: '读取日志失败：' + e.message });
             }
-            records.sort((a,b) => new Date(b.time) - new Date(a.time));
-            return res.status(200).json({ records: records.slice(0, 50) });
         }
 
         // 商家管理
@@ -73,132 +83,174 @@ export default async function handler(req, res) {
             if (req.method === 'GET' && req.query?.action === 'detail') {
                 const { id } = req.query;
                 if (!id) return res.status(400).json({ error: '缺少id' });
-                const merchantStr = await redis.get(`merchant:${id}`);
-                if (!merchantStr) return res.status(404).json({ error: '商家不存在' });
-                const merchant = JSON.parse(merchantStr);
-                const settingsStr = await redis.get(`merchant:${id}:settings`);
-                const settings = settingsStr ? JSON.parse(settingsStr) : {};
-                return res.status(200).json({
-                    id,
-                    name: merchant.name,
-                    password: merchant.password,
-                    balance: merchant.balance,
-                    status: merchant.status,
-                    settings
-                });
+                try {
+                    const merchantStr = await redis.get(`merchant:${id}`);
+                    if (!merchantStr) return res.status(404).json({ error: '商家不存在' });
+                    const merchant = JSON.parse(merchantStr);
+                    const settingsStr = await redis.get(`merchant:${id}:settings`);
+                    const settings = settingsStr ? JSON.parse(settingsStr) : {};
+                    return res.status(200).json({
+                        id,
+                        name: merchant.name,
+                        password: merchant.password,
+                        balance: merchant.balance,
+                        status: merchant.status,
+                        settings,
+                    });
+                } catch (e) {
+                    return res.status(500).json({ error: '读取商家详情失败：' + e.message });
+                }
             }
+
             // 流水
             if (req.method === 'GET' && req.query?.action === 'flow') {
                 const { merchant } = req.query;
                 if (!merchant) return res.status(400).json({ error: '缺少merchant' });
-                const keys = await redis.keys(`flow:${merchant}:*`);
-                const flows = [];
-                for (const key of keys) {
-                    const raw = await redis.get(key);
-                    if (raw) { try { flows.push(JSON.parse(raw)); } catch(e){} }
+                try {
+                    const keys = await redis.keys(`flow:${merchant}:*`);
+                    const flows = [];
+                    for (const key of keys) {
+                        const raw = await redis.get(key);
+                        if (raw) {
+                            try { flows.push(JSON.parse(raw)); } catch (e) {}
+                        }
+                    }
+                    flows.sort((a, b) => new Date(b.time) - new Date(a.time));
+                    return res.status(200).json({ flows });
+                } catch (e) {
+                    return res.status(500).json({ error: '读取流水失败：' + e.message });
                 }
-                flows.sort((a,b)=>new Date(b.time)-new Date(a.time));
-                return res.status(200).json({ flows });
             }
+
             // 统计
             if (req.method === 'GET' && req.query?.action === 'stats') {
                 const { merchant, start, end } = req.query;
-                if(!merchant||!start||!end) return res.status(400).json({ error: '参数不全' });
-                const keys = await redis.keys('log:*');
-                const daily = {}; let total = 0;
-                const sd = new Date(start), ed = new Date(end); ed.setHours(23,59,59,999);
-                for(const key of keys){
-                    const raw = await redis.get(key);
-                    if(!raw) continue;
-                    try{
-                        const log = JSON.parse(raw);
-                        if(log.merchant===merchant){
-                            const d = new Date(log.time);
-                            if(d>=sd && d<=ed){
-                                total++;
-                                const ds = d.toISOString().slice(0,10);
-                                daily[ds] = (daily[ds]||0)+1;
+                if (!merchant || !start || !end) return res.status(400).json({ error: '参数不全' });
+                try {
+                    const keys = await redis.keys('log:*');
+                    const daily = {};
+                    let total = 0;
+                    const sd = new Date(start), ed = new Date(end);
+                    ed.setHours(23, 59, 59, 999);
+                    for (const key of keys) {
+                        const raw = await redis.get(key);
+                        if (!raw) continue;
+                        try {
+                            const log = JSON.parse(raw);
+                            if (log.merchant === merchant) {
+                                const d = new Date(log.time);
+                                if (d >= sd && d <= ed) {
+                                    total++;
+                                    const ds = d.toISOString().slice(0, 10);
+                                    daily[ds] = (daily[ds] || 0) + 1;
+                                }
                             }
-                        }
-                    }catch(e){}
+                        } catch (e) {}
+                    }
+                    return res.status(200).json({ total, daily });
+                } catch (e) {
+                    return res.status(500).json({ error: '统计失败：' + e.message });
                 }
-                return res.status(200).json({ total, daily });
             }
+
             // 列表
             if (req.method === 'GET') {
-                const keys = await redis.keys('merchant:*');
-                const merchants = [];
-                for(const key of keys){
-                    if (key.includes(':settings')) continue;
-                    const data = await redis.get(key);
-                    if(data) {
-                        const m = JSON.parse(data);
-                        merchants.push({
-                            id: key.replace('merchant:',''),
-                            name: m.name,
-                            balance: m.balance,
-                            status: m.status||'active'
-                        });
+                try {
+                    const keys = await redis.keys('merchant:*');
+                    const merchants = [];
+                    for (const key of keys) {
+                        if (key.includes(':settings')) continue;
+                        const data = await redis.get(key);
+                        if (data) {
+                            const m = JSON.parse(data);
+                            merchants.push({
+                                id: key.replace('merchant:', ''),
+                                name: m.name,
+                                balance: m.balance,
+                                status: m.status || 'active',
+                            });
+                        }
                     }
+                    return res.status(200).json({ merchants });
+                } catch (e) {
+                    return res.status(500).json({ error: '读取商家列表失败：' + e.message });
                 }
-                return res.status(200).json({ merchants });
             }
+
             // 新增商家
             if (req.method === 'POST') {
                 const { id, name, password, balance } = req.body;
-                if(!id||!password) return res.status(400).json({ error: '缺少参数' });
-                const existing = await redis.get(`merchant:${id}`);
-                if (existing) return res.status(400).json({ error: '商家ID已存在' });
-                await redis.set(`merchant:${id}`, JSON.stringify({
-                    name: name||'',
-                    password,
-                    balance: balance||100,
-                    status:'active'
-                }));
-                return res.status(200).json({ success: true });
+                if (!id || !password) return res.status(400).json({ error: '缺少参数' });
+                try {
+                    const existing = await redis.get(`merchant:${id}`);
+                    if (existing) return res.status(400).json({ error: '商家ID已存在' });
+                    await redis.set(`merchant:${id}`, JSON.stringify({
+                        name: name || '',
+                        password,
+                        balance: balance || 100,
+                        status: 'active',
+                    }));
+                    return res.status(200).json({ success: true });
+                } catch (e) {
+                    return res.status(500).json({ error: '新增商家失败：' + e.message });
+                }
             }
+
             // 修改商家
             if (req.method === 'PUT') {
                 const { id, amount, type, note, password, status } = req.body;
-                if(!id) return res.status(400).json({ error: '缺少id' });
-                const merchantStr = await redis.get(`merchant:${id}`);
-                if(!merchantStr) return res.status(404).json({ error: '商家不存在' });
-                const merchant = JSON.parse(merchantStr);
-                if(password){
-                    merchant.password = password;
-                    await redis.set(`merchant:${id}`, JSON.stringify(merchant));
-                    return res.status(200).json({ success:true });
+                if (!id) return res.status(400).json({ error: '缺少id' });
+                try {
+                    const merchantStr = await redis.get(`merchant:${id}`);
+                    if (!merchantStr) return res.status(404).json({ error: '商家不存在' });
+                    const merchant = JSON.parse(merchantStr);
+
+                    if (password) {
+                        merchant.password = password;
+                        await redis.set(`merchant:${id}`, JSON.stringify(merchant));
+                        return res.status(200).json({ success: true });
+                    }
+
+                    if (amount !== undefined && type) {
+                        let newBalance = merchant.balance || 0;
+                        if (type === 'add') newBalance += Number(amount);
+                        else if (type === 'subtract') newBalance -= Number(amount);
+                        else return res.status(400).json({ error: '无效类型' });
+                        if (newBalance < 0) return res.status(400).json({ error: '余额不能为负' });
+                        merchant.balance = newBalance;
+                        await redis.set(`merchant:${id}`, JSON.stringify(merchant));
+                        await redis.set(`flow:${id}:${Date.now()}`, JSON.stringify({
+                            type: type === 'add' ? 'admin_add' : 'admin_subtract',
+                            amount: Number(amount),
+                            balanceAfter: newBalance,
+                            time: new Date().toISOString(),
+                            note: note || '',
+                        }));
+                        return res.status(200).json({ success: true });
+                    }
+
+                    if (status) {
+                        merchant.status = status;
+                        await redis.set(`merchant:${id}`, JSON.stringify(merchant));
+                        return res.status(200).json({ success: true });
+                    }
+
+                    return res.status(400).json({ error: '无效请求' });
+                } catch (e) {
+                    return res.status(500).json({ error: '修改商家失败：' + e.message });
                 }
-                if(amount!==undefined && type){
-                    let newBalance = merchant.balance||0;
-                    if(type==='add') newBalance += Number(amount);
-                    else if(type==='subtract') newBalance -= Number(amount);
-                    else return res.status(400).json({ error:'无效类型' });
-                    if(newBalance<0) return res.status(400).json({ error:'余额不能为负' });
-                    merchant.balance = newBalance;
-                    await redis.set(`merchant:${id}`, JSON.stringify(merchant));
-                    await redis.set(`flow:${id}:${Date.now()}`, JSON.stringify({
-                        type: type==='add'?'admin_add':'admin_subtract',
-                        amount: Number(amount),
-                        balanceAfter: newBalance,
-                        time: new Date().toISOString(),
-                        note: note||''
-                    }));
-                    return res.status(200).json({ success:true });
-                }
-                if(status){
-                    merchant.status = status;
-                    await redis.set(`merchant:${id}`, JSON.stringify(merchant));
-                    return res.status(200).json({ success:true });
-                }
-                return res.status(400).json({ error:'无效请求' });
             }
+
             // 删除商家
             if (req.method === 'DELETE') {
                 const { id } = req.body;
-                if(!id) return res.status(400).json({ error:'缺少id' });
-                await redis.del(`merchant:${id}`);
-                return res.status(200).json({ success:true });
+                if (!id) return res.status(400).json({ error: '缺少id' });
+                try {
+                    await redis.del(`merchant:${id}`);
+                    return res.status(200).json({ success: true });
+                } catch (e) {
+                    return res.status(500).json({ error: '删除商家失败：' + e.message });
+                }
             }
         }
 
@@ -206,19 +258,29 @@ export default async function handler(req, res) {
         if (action === 'config') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
-                const rateConfigStr = await redis.get('config:rate_limit');
-                const rateConfig = rateConfigStr ? JSON.parse(rateConfigStr) : {
-                    defaultLimit:5, unlimitedIPs:[], customLimits:{}
-                };
-                const bannedStr = await redis.get('config:banned_ips');
-                const banned = bannedStr ? JSON.parse(bannedStr) : [];
-                return res.status(200).json({ rateConfig, banned });
+                try {
+                    const rateConfigStr = await redis.get('config:rate_limit');
+                    const rateConfig = rateConfigStr ? JSON.parse(rateConfigStr) : {
+                        defaultLimit: 5,
+                        unlimitedIPs: [],
+                        customLimits: {},
+                    };
+                    const bannedStr = await redis.get('config:banned_ips');
+                    const banned = bannedStr ? JSON.parse(bannedStr) : [];
+                    return res.status(200).json({ rateConfig, banned });
+                } catch (e) {
+                    return res.status(500).json({ error: '读取配置失败：' + e.message });
+                }
             }
             if (req.method === 'POST') {
                 const { rateConfig, banned } = req.body;
-                if(rateConfig) await redis.set('config:rate_limit', JSON.stringify(rateConfig));
-                if(Array.isArray(banned)) await redis.set('config:banned_ips', JSON.stringify(banned));
-                return res.status(200).json({ success:true });
+                try {
+                    if (rateConfig) await redis.set('config:rate_limit', JSON.stringify(rateConfig));
+                    if (Array.isArray(banned)) await redis.set('config:banned_ips', JSON.stringify(banned));
+                    return res.status(200).json({ success: true });
+                } catch (e) {
+                    return res.status(500).json({ error: '保存配置失败：' + e.message });
+                }
             }
         }
 
@@ -226,38 +288,54 @@ export default async function handler(req, res) {
         if (action === 'contact' && req.method === 'POST') {
             if (!checkAdmin()) return;
             const { qrcode_url, phone, wechat, extra } = req.body;
-            await redis.set('config:contact', JSON.stringify({ qrcode_url, phone, wechat, extra }));
-            return res.status(200).json({ success:true });
+            try {
+                await redis.set('config:contact', JSON.stringify({ qrcode_url, phone, wechat, extra }));
+                return res.status(200).json({ success: true });
+            } catch (e) {
+                return res.status(500).json({ error: '保存联系方式失败：' + e.message });
+            }
         }
 
-        // 价目表
+        // 价目表管理
         if (action === 'pricing') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
-                const pricingStr = await redis.get('config:pricing');
-                const pricing = pricingStr ? JSON.parse(pricingStr) : { items:[], note:'' };
-                return res.status(200).json(pricing);
+                try {
+                    const pricingStr = await redis.get('config:pricing');
+                    const pricing = pricingStr ? JSON.parse(pricingStr) : { items: [], note: '' };
+                    return res.status(200).json(pricing);
+                } catch (e) {
+                    return res.status(500).json({ error: '读取价目表失败：' + e.message });
+                }
             }
             if (req.method === 'POST') {
                 const { items, note } = req.body;
-                if(!Array.isArray(items)) return res.status(400).json({ error:'items 必须是数组' });
-                await redis.set('config:pricing', JSON.stringify({ items, note: note||'' }));
-                return res.status(200).json({ success:true });
+                if (!Array.isArray(items)) return res.status(400).json({ error: 'items 必须是数组' });
+                try {
+                    await redis.set('config:pricing', JSON.stringify({ items, note: note || '' }));
+                    return res.status(200).json({ success: true });
+                } catch (e) {
+                    return res.status(500).json({ error: '保存价目表失败：' + e.message });
+                }
             }
         }
 
         // 直接登录商家后台
         if (action === 'login-as-merchant') {
             if (!checkAdmin()) return;
-            if (req.method !== 'POST') return res.status(405).json({ error:'只支持POST' });
+            if (req.method !== 'POST') return res.status(405).json({ error: '只支持POST' });
             const { id } = req.body;
-            if(!id) return res.status(400).json({ error:'缺少id' });
-            const merchantStr = await redis.get(`merchant:${id}`);
-            if(!merchantStr) return res.status(404).json({ error:'商家不存在' });
-            const merchant = JSON.parse(merchantStr);
-            const loginToken = Buffer.from(`${id}:${merchant.password}`).toString('base64');
-            const url = `/merchant.html?auto_token=${encodeURIComponent(loginToken)}`;
-            return res.status(200).json({ url });
+            if (!id) return res.status(400).json({ error: '缺少id' });
+            try {
+                const merchantStr = await redis.get(`merchant:${id}`);
+                if (!merchantStr) return res.status(404).json({ error: '商家不存在' });
+                const merchant = JSON.parse(merchantStr);
+                const loginToken = Buffer.from(`${id}:${merchant.password}`).toString('base64');
+                const url = `/merchant.html?auto_token=${encodeURIComponent(loginToken)}`;
+                return res.status(200).json({ url });
+            } catch (e) {
+                return res.status(500).json({ error: '生成登录链接失败：' + e.message });
+            }
         }
 
         return res.status(404).json({ error: '接口不存在' });
