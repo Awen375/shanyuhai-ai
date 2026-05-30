@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山予海 · 商家后台</title>
+    <style>
+        body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .card { background: white; border-radius: 24px; padding: 30px; max-width: 420px; width: 100%; box-shadow: 0 15px 30px rgba(0,0,0,0.08); }
+        h2 { color: #0b4f6c; margin-bottom: 20px; }
+        input, button { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; }
+        button { background: #1e90ff; color: white; border: none; cursor: pointer; font-weight: 600; border-radius: 50px; }
+        .info { text-align: center; font-size: 18px; margin: 20px 0; }
+        #qrImage { display: block; margin: 20px auto; max-width: 200px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="loginBox" class="card">
+        <h2>🔐 商家登录</h2>
+        <input type="text" id="merchantId" placeholder="商家ID">
+        <input type="password" id="password" placeholder="密码">
+        <button onclick="login()">登录</button>
+        <p id="loginError" style="color:red;"></p>
+    </div>
+
+    <div id="dashboard" class="card hidden">
+        <h2>🌊 山予海商家中心</h2>
+        <div class="info">🧮 剩余算力：<strong id="balanceSpan"></strong></div>
+        <p>专属推广二维码（客人扫码生成好评，每次消耗2算力）</p>
+        <img id="qrImage" />
+        <p style="text-align:center; color:#888; word-break:break-all;">链接: <span id="qrUrl"></span></p>
+        <button onclick="logout()">退出登录</button>
+    </div>
+
+    <script>
+        const API_BASE = '/api/merchant';
+
+        async function login(){
+            const id = document.getElementById('merchantId').value.trim();
+            const password = document.getElementById('password').value;
+            const res = await fetch(`${API_BASE}/login`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ id, password })
+            });
+            const data = await res.json();
+            if(data.token) {
+                localStorage.setItem('merchant_token', data.token);
+                localStorage.setItem('merchant_id', id);
+                showDashboard();
+            } else {
+                document.getElementById('loginError').innerText = data.error || '登录失败';
+            }
+        }
+
+        async function showDashboard(){
+            const token = localStorage.getItem('merchant_token');
+            const id = localStorage.getItem('merchant_id');
+            const res = await fetch(`${API_BASE}/info`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if(data.id) {
+                document.getElementById('balanceSpan').innerText = data.balance;
+                const url = `https://www.shanyh.top?merchant=${data.id}`;
+                document.getElementById('qrUrl').innerText = url;
+                document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+                document.getElementById('loginBox').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+            } else {
+                alert('登录已过期，请重新登录');
+                logout();
+            }
+        }
+
+        function logout(){
+            localStorage.removeItem('merchant_token');
+            localStorage.removeItem('merchant_id');
+            location.reload();
+        }
+
+        if(localStorage.getItem('merchant_token')) {
+            document.getElementById('loginBox').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            showDashboard();
+        }
+    </script>
+</body>
+</html>
