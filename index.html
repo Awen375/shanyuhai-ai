@@ -27,12 +27,16 @@
         }
         .scan-reminder h2 { font-size: 26px; margin-bottom: 15px; color: #0b4f6c; }
         .scan-reminder p { color: #5a7d8c; margin: 10px 0; font-size: 15px; }
-        .merchant-login-link {
-            margin-top: 30px; background: rgba(255,255,255,0.7); backdrop-filter: blur(10px);
-            padding: 12px 30px; border-radius: 50px; color: #0b4f6c; text-decoration: none;
-            font-size: 15px; font-weight: 500; border: 1px solid rgba(30,144,255,0.3); transition: all 0.3s; display: inline-block;
+        .scan-buttons {
+            margin-top: 25px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;
         }
-        .merchant-login-link:hover { background: rgba(30,144,255,0.15); border-color: rgba(30,144,255,0.5); }
+        .scan-btn {
+            background: rgba(255,255,255,0.7); backdrop-filter: blur(10px);
+            padding: 12px 25px; border-radius: 50px; color: #0b4f6c; text-decoration: none;
+            font-size: 15px; font-weight: 500; border: 1px solid rgba(30,144,255,0.3); transition: all 0.3s; display: inline-block;
+            cursor: pointer;
+        }
+        .scan-btn:hover { background: rgba(30,144,255,0.15); border-color: rgba(30,144,255,0.5); }
         .container {
             position: relative; z-index: 1; background: rgba(255,255,255,0.8); backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px); border-radius: 32px;
@@ -97,9 +101,10 @@
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); z-index: 999; align-items: center; justify-content: center;
         }
-        .modal-box { background: white; border-radius: 24px; padding: 30px; text-align: center; max-width: 320px; width: 90%; }
+        .modal-box { background: white; border-radius: 24px; padding: 30px; text-align: center; max-width: 360px; width: 90%; }
         .modal-box input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; margin: 15px 0; font-size: 16px; }
         .modal-box button { width: auto; margin: 5px; }
+        .modal-box img { max-width: 200px; margin: 10px auto; }
         @media (max-width: 480px) {
             .container { padding: 25px 20px; border-radius: 28px; }
             h1 { font-size: 26px; }
@@ -115,7 +120,10 @@
         <h2>山予海民宿 · AI好评助手</h2>
         <p>请扫描民宿提供的专属二维码使用</p>
         <p style="color: #888; font-size: 14px;">如有疑问，请联系民宿管家</p>
-        <a href="/merchant.html" class="merchant-login-link">🏪 商家登录</a>
+        <div class="scan-buttons">
+            <a href="/merchant.html" class="scan-btn">🏪 商家登录</a>
+            <span class="scan-btn" onclick="openContact()">📞 联系管理员</span>
+        </div>
     </div>
 
     <!-- 有 merchant 参数时显示 -->
@@ -152,13 +160,25 @@
         </div>
     </div>
 
-    <!-- 隐藏后台入口模态框 -->
+    <!-- 超级后台入口模态框 -->
     <div id="adminModal" class="modal-overlay">
         <div class="modal-box">
             <h3>🔐 管理员验证</h3>
             <input type="password" id="adminPassInput" placeholder="请输入后台密码">
             <button onclick="checkAdminPass()">进入后台</button>
             <button onclick="closeAdminModal()" style="background:#ccc;color:#333;">取消</button>
+        </div>
+    </div>
+
+    <!-- 联系管理员弹窗 -->
+    <div id="contactModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3>📞 联系管理员</h3>
+            <div id="contactQrContainer">
+                <img id="contactQrImage" src="" alt="管理员微信二维码" />
+            </div>
+            <div id="contactInfo" style="margin: 10px 0; font-size: 14px;"></div>
+            <button onclick="document.getElementById('contactModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
         </div>
     </div>
 
@@ -208,13 +228,37 @@
 
         function checkAdminPass() {
             const pass = document.getElementById('adminPassInput').value;
-            if (pass === 'zjm1314520') {   // 超级密码
+            if (pass === 'zjm1314520') {
                 window.location.href = '/admin.html';
             } else {
                 alert('密码错误');
             }
         }
         function closeAdminModal() { document.getElementById('adminModal').style.display = 'none'; }
+
+        // 联系管理员弹窗
+        async function openContact() {
+            document.getElementById('contactModal').style.display = 'flex';
+            try {
+                const res = await fetch('/api/admin/contact');
+                const data = await res.json();
+                const qrImg = document.getElementById('contactQrImage');
+                if (data.qrcode_url) {
+                    qrImg.src = data.qrcode_url;
+                    document.getElementById('contactQrContainer').style.display = '';
+                } else {
+                    document.getElementById('contactQrContainer').style.display = 'none';
+                }
+                let infoHtml = '';
+                if (data.phone) infoHtml += `<p>📱 电话：${data.phone}</p>`;
+                if (data.wechat) infoHtml += `<p>💬 微信：${data.wechat}</p>`;
+                if (data.extra) infoHtml += `<p>${data.extra}</p>`;
+                if (!infoHtml) infoHtml = '<p>暂无联系方式</p>';
+                document.getElementById('contactInfo').innerHTML = infoHtml;
+            } catch (e) {
+                document.getElementById('contactInfo').innerHTML = '<p>获取联系方式失败</p>';
+            }
+        }
 
         // 生成好评
         async function generate() {
