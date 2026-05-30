@@ -26,9 +26,10 @@ const redis = {
 
 export default async function handler(req, res) {
     try {
-        const url = new URL(req.url);
-        const path = url.pathname.replace('/api/merchant/', '');
-        const action = path || '';
+        // 使用 req.url 直接提取 action，避免 new URL 错误
+        const pathOnly = req.url.split('?')[0];               // e.g., /api/merchant/login
+        const rawAction = pathOnly.replace('/api/merchant/', '').replace('/api/merchant', '');
+        const action = rawAction || '';
 
         // 登录
         if (req.method === 'POST' && action === 'login') {
