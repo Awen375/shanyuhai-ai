@@ -23,15 +23,18 @@
         .hidden { display: none; }
         #loginBox { max-width: 350px; margin: 100px auto; }
         .stat-box { background: #f0f8ff; border-radius: 12px; padding: 15px; margin: 15px 0; }
+        /* 模态框 */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 999;
             align-items: center; justify-content: center;
         }
         .modal-content {
-            background: white; border-radius: 20px; padding: 25px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+            background: white; border-radius: 20px; padding: 25px; max-width: 400px; width: 90%;
         }
-        #contactPanel { margin-top: 10px; }
+        .modal-content h3 { margin-top: 0; }
+        .modal-content input, .modal-content select { width: 100%; margin-bottom: 12px; }
+        .modal-content button { width: auto; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -117,13 +120,34 @@
 
     <!-- 流水弹窗 -->
     <div id="flowModal" class="modal-overlay">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width:600px;">
             <h3>🧮 算力流水 <span id="flowMerchantName"></span></h3>
             <table>
                 <thead><tr><th>时间</th><th>类型</th><th>变动</th><th>变动后算力</th><th>备注</th></tr></thead>
                 <tbody id="flowTableBody"></tbody>
             </table>
             <button onclick="document.getElementById('flowModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
+        </div>
+    </div>
+
+    <!-- 充值/扣除弹窗 -->
+    <div id="rechargeModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>💳 调整算力</h3>
+            <input type="hidden" id="rechargeMerchantId">
+            <label>类型：</label>
+            <select id="rechargeType">
+                <option value="add">➕ 充值算力</option>
+                <option value="subtract">➖ 扣除算力</option>
+            </select>
+            <label>金额（算力）：</label>
+            <input type="number" id="rechargeAmount" min="1" value="10">
+            <label>备注：</label>
+            <input type="text" id="rechargeNote" placeholder="例如：活动赠送">
+            <div style="margin-top:15px;">
+                <button onclick="submitRecharge()">确认提交</button>
+                <button onclick="document.getElementById('rechargeModal').style.display='none'" style="background:#ccc;color:#333;">取消</button>
+            </div>
         </div>
     </div>
 
@@ -155,7 +179,6 @@
             await loadContact();
         }
 
-        // 折叠联系方式
         function toggleContact() {
             const panel = document.getElementById('contactPanel');
             panel.style.display = panel.style.display === 'none' ? '' : 'none';
@@ -178,7 +201,7 @@
                     <td>${m.balance}</td>
                     <td>${statusText}</td>
                     <td>
-                        <button onclick="rechargeMerchant('${m.id}')">💰充值</button>
+                        <button onclick="openRecharge('${m.id}')" class="info">💳 充/扣</button>
                         <button onclick="showFlow('${m.id}')" class="info">📈流水</button>
                         <button onclick="deleteMerchant('${m.id}')" class="danger">🗑删除</button>
                         ${m.status === 'banned' 
@@ -205,15 +228,34 @@
             await loadMerchants();
         }
 
-        async function rechargeMerchant(id){
-            const newBalance = prompt('输入新的算力余额（将覆盖当前余额）：');
-            if(newBalance !== null && !isNaN(newBalance)) {
-                await fetch('/api/admin/merchants', {
-                    method: 'PUT',
-                    headers: { 'Content-Type':'application/json', 'x-admin-token': token() },
-                    body: JSON.stringify({ id, balance: parseInt(newBalance) })
-                });
+        // 打开充值/扣除弹窗
+        function openRecharge(id) {
+            document.getElementById('rechargeMerchantId').value = id;
+            document.getElementById('rechargeAmount').value = 10;
+            document.getElementById('rechargeNote').value = '';
+            document.getElementById('rechargeModal').style.display = 'flex';
+        }
+
+        async function submitRecharge() {
+            const id = document.getElementById('rechargeMerchantId').value;
+            const amount = parseInt(document.getElementById('rechargeAmount').value);
+            const type = document.getElementById('rechargeType').value;
+            const note = document.getElementById('rechargeNote').value.trim();
+
+            if (!amount || amount <= 0) return alert('请输入有效金额');
+
+            const res = await fetch('/api/admin/merchants', {
+                method: 'PUT',
+                headers: { 'Content-Type':'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id, amount, type, note })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('操作成功');
+                document.getElementById('rechargeModal').style.display = 'none';
                 await loadMerchants();
+            } else {
+                alert('操作失败：' + (data.error || '未知错误'));
             }
         }
 
@@ -252,9 +294,9 @@
             } else {
                 data.flows.forEach(f => {
                     const time = new Date(f.time).toLocaleString('zh-CN');
-                    const typeMap = { 'consume': '🔻消耗', 'recharge': '💰充值', 'initial': '🆕初始' };
+                    const typeMap = { 'consume': '🔻消耗', 'recharge': '💰充值', 'initial': '🆕初始', 'admin_add': '➕管理员添加', 'admin_subtract': '➖管理员扣除' };
                     const typeText = typeMap[f.type] || f.type;
-                    const amount = f.type === 'consume' ? `-${f.amount}` : `+${f.amount}`;
+                    const amount = (f.type === 'consume' || f.type === 'admin_subtract') ? `-${f.amount}` : `+${f.amount}`;
                     tbody.innerHTML += `<tr>
                         <td>${time}</td>
                         <td>${typeText}</td>
