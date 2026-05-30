@@ -97,31 +97,55 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
     }
 
-    // ---------- 修改（余额或状态） ----------
+    // ---------- 修改（余额调整、封禁状态） ----------
     if (req.method === 'PUT') {
-        const { id, balance, status } = req.body;
+        const { id, amount, type, note, balance, status } = req.body;
         if (!id) return res.status(400).json({ error: '缺少id' });
         const merchant = await kv.get(`merchant:${id}`);
         if (!merchant) return res.status(404).json({ error: '商家不存在' });
 
-        // 处理余额变更
-        if (balance !== undefined) {
+        // 处理余额调整（新逻辑：amount + type）
+        if (amount !== undefined && type) {
+            const oldBalance = merchant.balance || 0;
+            let newBalance = oldBalance;
+            let flowType = '';
+            if (type === 'add') {
+                newBalance = oldBalance + Number(amount);
+                flowType = 'admin_add';
+            } else if (type === 'subtract') {
+                newBalance = oldBalance - Number(amount);
+                flowType = 'admin_subtract';
+                if (newBalance < 0) return res.status(400).json({ error: '算力不足，扣除后余额不能为负' });
+            } else {
+                return res.status(400).json({ error: '无效的调整类型' });
+            }
+            merchant.balance = newBalance;
+
+            // 写流水
+            await kv.set(`flow:${id}:${Date.now()}`, JSON.stringify({
+                type: flowType,
+                amount: Number(amount),
+                balanceAfter: newBalance,
+                time: new Date().toISOString(),
+                note: note || `管理员${type === 'add' ? '充值' : '扣除'}算力`
+            }));
+        }
+        // 兼容旧的覆盖余额逻辑（备用）
+        else if (balance !== undefined) {
             const oldBalance = merchant.balance || 0;
             const newBalance = Number(balance);
             merchant.balance = newBalance;
 
-            // 写充值流水
-            const changeAmount = newBalance - oldBalance;
             await kv.set(`flow:${id}:${Date.now()}`, JSON.stringify({
                 type: 'recharge',
-                amount: changeAmount,
+                amount: newBalance - oldBalance,
                 balanceAfter: newBalance,
                 time: new Date().toISOString(),
-                note: `管理员操作，从 ${oldBalance} 调整为 ${newBalance}`
+                note: note || `管理员直接设置算力`
             }));
         }
 
-        // 处理状态变更
+        // 处理状态
         if (status) {
             merchant.status = status;
         }
@@ -135,7 +159,6 @@ export default async function handler(req, res) {
         const { id } = req.body;
         if (!id) return res.status(400).json({ error: '缺少id' });
         await kv.del(`merchant:${id}`);
-        // 可选：删除相关流水？保留流水以便查询历史，所以不删
         return res.status(200).json({ success: true });
     }
 
