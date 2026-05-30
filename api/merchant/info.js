@@ -9,12 +9,17 @@ export default async function handler(req, res) {
     try {
         const decoded = Buffer.from(token, 'base64').toString();
         [id, password] = decoded.split(':');
-    } catch(e) {
+    } catch (e) {
         return res.status(401).json({ error: '无效token' });
     }
 
     const merchant = await kv.get(`merchant:${id}`);
     if (!merchant || merchant.password !== password) return res.status(401).json({ error: '登录信息失效' });
 
-    res.status(200).json({ id, name: merchant.name, balance: merchant.balance });
+    res.status(200).json({
+        id,
+        name: merchant.name,
+        balance: merchant.balance,
+        token_val: merchant.token_val || ''
+    });
 }
