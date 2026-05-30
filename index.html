@@ -45,6 +45,49 @@
             100% { transform: translateX(-1440px); }
         }
 
+        /* ========== 扫码提示页面 ========== */
+        .scan-reminder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            color: #1e3b4a;
+            z-index: 2;
+            position: relative;
+            padding: 20px;
+        }
+        .scan-reminder h2 {
+            font-size: 26px;
+            margin-bottom: 15px;
+            color: #0b4f6c;
+        }
+        .scan-reminder p {
+            color: #5a7d8c;
+            margin: 10px 0;
+            font-size: 15px;
+        }
+        .merchant-login-link {
+            margin-top: 30px;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(10px);
+            padding: 12px 30px;
+            border-radius: 50px;
+            color: #0b4f6c;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            border: 1px solid rgba(30,144,255,0.3);
+            transition: all 0.3s;
+            display: inline-block;
+        }
+        .merchant-login-link:hover {
+            background: rgba(30,144,255,0.15);
+            border-color: rgba(30,144,255,0.5);
+        }
+
+        /* ========== 主应用容器 ========== */
         .container {
             position: relative;
             z-index: 1;
@@ -215,7 +258,6 @@
             display: none;
             font-size: 15px;
             border: 1px solid rgba(30,144,255,0.2);
-            border-left: 5px solid #1e90ff;
         }
         .result-box.show {
             display: block;
@@ -270,28 +312,6 @@
             cursor: pointer;
         }
 
-        /* 扫码提示页面 */
-        .scan-reminder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            text-align: center;
-            color: #1e3b4a;
-            z-index: 2;
-            position: relative;
-        }
-        .scan-reminder h2 {
-            font-size: 26px;
-            margin-bottom: 15px;
-            color: #0b4f6c;
-        }
-        .scan-reminder p {
-            color: #5a7d8c;
-            margin: 10px 0;
-        }
-
         @media (max-width: 480px) {
             .container {
                 padding: 30px 20px;
@@ -308,15 +328,17 @@
 </head>
 <body>
 
-    <!-- 如果没有 merchant 参数，显示扫码提示 -->
+    <!-- ==================== 无 merchant 参数时显示 ==================== -->
     <div id="noMerchant" class="scan-reminder">
         <div style="font-size: 60px;">🌊</div>
         <h2>山予海民宿 · AI好评助手</h2>
         <p>请扫描民宿提供的专属二维码使用</p>
         <p style="color: #888; font-size: 14px;">如有疑问，请联系民宿管家</p>
+        <!-- 商家登录入口 -->
+        <a href="/merchant.html" class="merchant-login-link">🏪 商家登录</a>
     </div>
 
-    <!-- 如果有 merchant 参数，显示主应用 -->
+    <!-- ==================== 有 merchant 参数时显示 ==================== -->
     <div id="mainApp" style="display: none; width: 100%;">
         <div class="container">
             <div class="header">
@@ -351,7 +373,7 @@
         </div>
     </div>
 
-    <!-- 隐藏后台入口模态框 -->
+    <!-- ==================== 隐藏后台入口模态框 ==================== -->
     <div id="adminModal" class="modal-overlay">
         <div class="modal-box">
             <h3>🔐 管理员验证</h3>
@@ -363,49 +385,58 @@
 
     <script>
         // ========== merchant 参数检测 ==========
-        const urlParams = new URLSearchParams(window.location.search);
-        const merchantId = urlParams.get('merchant');
-        if (merchantId) {
-            // 存储到 localStorage，切换界面
-            localStorage.setItem('current_merchant', merchantId);
-            document.getElementById('noMerchant').style.display = 'none';
-            document.getElementById('mainApp').style.display = '';
-        } else {
-            // 检查是否有之前保存的 merchant
-            const savedMerchant = localStorage.getItem('current_merchant');
-            if (savedMerchant) {
-                document.getElementById('noMerchant').style.display = 'none';
-                document.getElementById('mainApp').style.display = '';
-            } else {
-                document.getElementById('noMerchant').style.display = '';
-                document.getElementById('mainApp').style.display = 'none';
-            }
-        }
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const merchantId = urlParams.get('merchant');
+            const noMerchantDiv = document.getElementById('noMerchant');
+            const mainAppDiv = document.getElementById('mainApp');
 
-        // ========== 隐藏后台入口（连续点击5次标题） ==========
-        const trigger = document.getElementById('secretTrigger');
-        let clickCount = 0;
-        let clickTimer = null;
-        trigger.addEventListener('click', () => {
-            clickCount++;
-            if (clickCount === 1) {
-                clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+            if (merchantId) {
+                // 有 merchant 参数，存储并显示主界面
+                localStorage.setItem('current_merchant', merchantId);
+                noMerchantDiv.style.display = 'none';
+                mainAppDiv.style.display = '';
+            } else {
+                // 检查 localStorage 是否有之前存储的 merchant
+                const savedMerchant = localStorage.getItem('current_merchant');
+                if (savedMerchant) {
+                    noMerchantDiv.style.display = 'none';
+                    mainAppDiv.style.display = '';
+                } else {
+                    // 无任何 merchant 信息，显示扫码页面
+                    noMerchantDiv.style.display = '';
+                    mainAppDiv.style.display = 'none';
+                }
             }
-            if (clickCount >= 5) {
-                clearTimeout(clickTimer);
-                clickCount = 0;
-                document.getElementById('adminModal').style.display = 'flex';
-            }
-        });
+        })();
+
+        // ========== 隐藏后台入口（连续点击 5 次标题） ==========
+        (function() {
+            const trigger = document.getElementById('secretTrigger');
+            let clickCount = 0;
+            let clickTimer = null;
+            trigger.addEventListener('click', () => {
+                clickCount++;
+                if (clickCount === 1) {
+                    clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+                }
+                if (clickCount >= 5) {
+                    clearTimeout(clickTimer);
+                    clickCount = 0;
+                    document.getElementById('adminModal').style.display = 'flex';
+                }
+            });
+        })();
 
         function checkAdminPass() {
             const pass = document.getElementById('adminPassInput').value;
-            if (pass === 'shanyuhai2024') {   // 改成你自己的密码
+            if (pass === 'shanyuhai2024') {   // ⚠️ 请修改为你自己的密码
                 window.location.href = '/admin.html';
             } else {
                 alert('密码错误');
             }
         }
+
         function closeAdminModal() {
             document.getElementById('adminModal').style.display = 'none';
         }
@@ -429,8 +460,8 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        prompt,
-                        style,
+                        prompt: prompt,
+                        style: style,
                         merchant: localStorage.getItem('current_merchant') || ''
                     })
                 });
