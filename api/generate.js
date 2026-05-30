@@ -54,6 +54,7 @@ export default async function handler(req, res) {
     if (merchantId) {
         const merchant = await kv.get(`merchant:${merchantId}`);
         if (!merchant) return res.status(400).json({ error: '无效商家' });
+     if (merchant.status === 'banned') return res.status(403).json({ error: '该商家已被封禁，请联系管理员。' });
         if (merchant.balance < 2) return res.status(402).json({ error: '商家算力不足，生成失败。' });
         merchant.balance -= 2;
         await kv.set(`merchant:${merchantId}`, merchant);
