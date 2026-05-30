@@ -6,350 +6,120 @@
     <title>山予海民宿 · AI好评助手</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
             min-height: 100vh;
             background: linear-gradient(165deg, #e8f4f8 0%, #d4eaf3 30%, #b8dff0 60%, #a3d2e0 100%);
             background-attachment: fixed;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            position: relative;
-            overflow-x: hidden;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; position: relative; overflow-x: hidden;
         }
-
-        /* 海浪装饰 */
         body::before {
-            content: '';
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 200px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 200"><path fill="%23ffffff30" d="M0,100 C240,150 480,50 720,100 C960,150 1200,50 1440,100 L1440,200 L0,200 Z"></path></svg>') repeat-x;
-            background-size: 1440px 200px;
-            animation: wave 20s linear infinite;
-            pointer-events: none;
-            z-index: 0;
+            content: ''; position: fixed; bottom: 0; left: 0; width: 100%; height: 200px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 200"><path fill="%23ffffff30" d="M0,100 C240,150 480,50 720,100 C960,150 1200,50 1440,100 L1440,200 L0,200 Z"/></svg>') repeat-x;
+            background-size: 1440px 200px; animation: wave 20s linear infinite; pointer-events: none; z-index: 0;
         }
-        @keyframes wave {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-1440px); }
-        }
-
-        /* ========== 扫码提示页面 ========== */
+        @keyframes wave { 0% { transform: translateX(0); } 100% { transform: translateX(-1440px); } }
         .scan-reminder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            text-align: center;
-            color: #1e3b4a;
-            z-index: 2;
-            position: relative;
-            padding: 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; text-align: center; color: #1e3b4a; z-index: 2; position: relative; padding: 20px;
         }
-        .scan-reminder h2 {
-            font-size: 26px;
-            margin-bottom: 15px;
-            color: #0b4f6c;
-        }
-        .scan-reminder p {
-            color: #5a7d8c;
-            margin: 10px 0;
-            font-size: 15px;
-        }
+        .scan-reminder h2 { font-size: 26px; margin-bottom: 15px; color: #0b4f6c; }
+        .scan-reminder p { color: #5a7d8c; margin: 10px 0; font-size: 15px; }
         .merchant-login-link {
-            margin-top: 30px;
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(10px);
-            padding: 12px 30px;
-            border-radius: 50px;
-            color: #0b4f6c;
-            text-decoration: none;
-            font-size: 15px;
-            font-weight: 500;
-            border: 1px solid rgba(30,144,255,0.3);
-            transition: all 0.3s;
-            display: inline-block;
+            margin-top: 30px; background: rgba(255,255,255,0.7); backdrop-filter: blur(10px);
+            padding: 12px 30px; border-radius: 50px; color: #0b4f6c; text-decoration: none;
+            font-size: 15px; font-weight: 500; border: 1px solid rgba(30,144,255,0.3); transition: all 0.3s; display: inline-block;
         }
-        .merchant-login-link:hover {
-            background: rgba(30,144,255,0.15);
-            border-color: rgba(30,144,255,0.5);
-        }
-
-        /* ========== 主应用容器 ========== */
+        .merchant-login-link:hover { background: rgba(30,144,255,0.15); border-color: rgba(30,144,255,0.5); }
         .container {
-            position: relative;
-            z-index: 1;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 32px;
-            box-shadow: 0 25px 50px rgba(15, 76, 129, 0.15), 0 0 0 1px rgba(255,255,255,0.6) inset;
-            padding: 45px 35px;
-            max-width: 550px;
-            width: 100%;
-            border: 1px solid rgba(255,255,255,0.5);
+            position: relative; z-index: 1; background: rgba(255,255,255,0.8); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); border-radius: 32px;
+            box-shadow: 0 25px 50px rgba(15,76,129,0.15), 0 0 0 1px rgba(255,255,255,0.6) inset;
+            padding: 45px 35px; max-width: 550px; width: 100%; border: 1px solid rgba(255,255,255,0.5);
         }
-
-        .header {
-            text-align: center;
-            margin-bottom: 35px;
-        }
-
-        .logo-icon {
-            font-size: 58px;
-            margin-bottom: 10px;
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
-            animation: float 3s ease-in-out infinite;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
-        }
-
+        .header { text-align: center; margin-bottom: 35px; }
+        .logo-icon { font-size: 58px; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-8px); } }
         h1 {
-            font-size: 32px;
-            font-weight: 700;
+            font-size: 32px; font-weight: 700;
             background: linear-gradient(135deg, #0b4f6c, #1e8bc3);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
-            user-select: none;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            margin-bottom: 8px; letter-spacing: 1px; user-select: none; cursor: pointer;
         }
-
-        .subtitle {
-            color: #5a7d8c;
-            font-size: 15px;
-            font-weight: 400;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-        .subtitle span {
-            background: rgba(30, 144, 255, 0.15);
-            padding: 2px 10px;
-            border-radius: 20px;
-            font-size: 13px;
-            color: #0f4c81;
-        }
-
-        .form-group {
-            margin-bottom: 22px;
-        }
-
-        label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-weight: 600;
-            color: #1a3c4a;
-            margin-bottom: 8px;
-            font-size: 14px;
-            letter-spacing: 0.5px;
-        }
-        label i {
-            font-style: normal;
-            font-size: 18px;
-        }
-
+        .subtitle { color: #5a7d8c; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .subtitle span { background: rgba(30,144,255,0.15); padding: 2px 10px; border-radius: 20px; font-size: 13px; color: #0f4c81; }
+        .form-group { margin-bottom: 22px; }
+        label { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #1a3c4a; margin-bottom: 8px; font-size: 14px; }
+        label i { font-style: normal; font-size: 18px; }
         select, textarea {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid rgba(30, 144, 255, 0.2);
-            border-radius: 18px;
-            font-size: 15px;
-            outline: none;
-            transition: all 0.3s;
-            font-family: inherit;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(5px);
-            color: #2c3e50;
-            appearance: none;
+            width: 100%; padding: 14px 18px; border: 2px solid rgba(30,144,255,0.2); border-radius: 18px;
+            font-size: 15px; outline: none; transition: all 0.3s; font-family: inherit;
+            background: rgba(255,255,255,0.7); backdrop-filter: blur(5px); color: #2c3e50; appearance: none;
         }
         select {
             background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%231e90ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>');
-            background-repeat: no-repeat;
-            background-position: right 18px center;
-            background-size: 18px;
-            cursor: pointer;
+            background-repeat: no-repeat; background-position: right 18px center; background-size: 18px; cursor: pointer;
         }
-        textarea {
-            height: 90px;
-            resize: vertical;
-            background-image: none;
-        }
-        select:focus, textarea:focus {
-            border-color: #1e90ff;
-            background: rgba(255, 255, 255, 0.95);
-            box-shadow: 0 0 0 5px rgba(30, 144, 255, 0.15);
-        }
-
+        textarea { height: 90px; resize: vertical; background-image: none; }
+        select:focus, textarea:focus { border-color: #1e90ff; background: rgba(255,255,255,0.95); box-shadow: 0 0 0 5px rgba(30,144,255,0.15); }
         button {
-            width: 100%;
-            background: linear-gradient(135deg, #0b4f6c 0%, #1e90ff 100%);
-            color: white;
-            border: none;
-            padding: 16px;
-            font-size: 18px;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            margin: 10px 0 20px;
-            transition: all 0.3s;
-            box-shadow: 0 10px 25px rgba(15, 76, 129, 0.35);
-            letter-spacing: 1px;
-            position: relative;
-            overflow: hidden;
+            width: 100%; background: linear-gradient(135deg, #0b4f6c 0%, #1e90ff 100%); color: white; border: none;
+            padding: 16px; font-size: 18px; font-weight: 600; border-radius: 50px; cursor: pointer;
+            margin: 10px 0 20px; transition: all 0.3s; box-shadow: 0 10px 25px rgba(15,76,129,0.35);
+            letter-spacing: 1px; position: relative; overflow: hidden;
         }
-        button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: 0 5px 15px rgba(15, 76, 129, 0.2);
-        }
+        button:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: 0 5px 15px rgba(15,76,129,0.2); }
         button::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%);
-            opacity: 0;
-            transition: opacity 0.3s;
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%); opacity: 0; transition: opacity 0.3s;
         }
-        button:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(15, 76, 129, 0.45);
-        }
-        button:hover:not(:disabled)::after {
-            opacity: 1;
-        }
-        button:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
+        button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(15,76,129,0.45); }
+        button:hover:not(:disabled)::after { opacity: 1; }
+        button:active:not(:disabled) { transform: translateY(0); }
         .result-box {
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 22px;
-            text-align: left;
-            min-height: 80px;
-            color: #1e3b4a;
-            line-height: 1.8;
-            white-space: pre-wrap;
-            word-break: break-word;
-            border-left: 5px solid #1e90ff;
-            display: none;
-            font-size: 15px;
-            border: 1px solid rgba(30,144,255,0.2);
+            background: rgba(255,255,255,0.75); backdrop-filter: blur(10px); border-radius: 20px;
+            padding: 22px; text-align: left; min-height: 80px; color: #1e3b4a; line-height: 1.8;
+            white-space: pre-wrap; word-break: break-word; border-left: 5px solid #1e90ff;
+            display: none; font-size: 15px; border: 1px solid rgba(30,144,255,0.2);
         }
-        .result-box.show {
-            display: block;
-            animation: fadeInUp 0.5s ease;
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 25px;
-            font-size: 12px;
-            color: #6b8e9e;
-            font-weight: 300;
-            letter-spacing: 0.5px;
-        }
-
-        /* 后台入口模态框 */
+        .result-box.show { display: block; animation: fadeInUp 0.5s ease; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .footer { text-align: center; margin-top: 25px; font-size: 12px; color: #6b8e9e; font-weight: 300; letter-spacing: 0.5px; }
         .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(6px);
-            z-index: 999;
-            align-items: center;
-            justify-content: center;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); z-index: 999; align-items: center; justify-content: center;
         }
-        .modal-box {
-            background: white;
-            border-radius: 24px;
-            padding: 30px;
-            text-align: center;
-            max-width: 320px;
-            width: 90%;
-        }
-        .modal-box input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            margin: 15px 0;
-            font-size: 16px;
-        }
-        .modal-box button {
-            width: auto;
-            margin: 5px;
-        }
-        .hidden-admin-trigger {
-            cursor: pointer;
-        }
-
+        .modal-box { background: white; border-radius: 24px; padding: 30px; text-align: center; max-width: 320px; width: 90%; }
+        .modal-box input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; margin: 15px 0; font-size: 16px; }
+        .modal-box button { width: auto; margin: 5px; }
         @media (max-width: 480px) {
-            .container {
-                padding: 30px 20px;
-                border-radius: 28px;
-            }
-            h1 {
-                font-size: 26px;
-            }
-            .logo-icon {
-                font-size: 48px;
-            }
+            .container { padding: 30px 20px; border-radius: 28px; }
+            h1 { font-size: 26px; }
+            .logo-icon { font-size: 48px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- ==================== 无 merchant 参数时显示 ==================== -->
+    <!-- 无 merchant 参数时显示 -->
     <div id="noMerchant" class="scan-reminder">
         <div style="font-size: 60px;">🌊</div>
         <h2>山予海民宿 · AI好评助手</h2>
         <p>请扫描民宿提供的专属二维码使用</p>
         <p style="color: #888; font-size: 14px;">如有疑问，请联系民宿管家</p>
-        <!-- 商家登录入口 -->
         <a href="/merchant.html" class="merchant-login-link">🏪 商家登录</a>
     </div>
 
-    <!-- ==================== 有 merchant 参数时显示 ==================== -->
+    <!-- 有 merchant 参数时显示 -->
     <div id="mainApp" style="display: none; width: 100%;">
         <div class="container">
             <div class="header">
                 <div class="logo-icon">🌊</div>
-                <h1 id="secretTrigger" class="hidden-admin-trigger">山予海民宿</h1>
-                <div class="subtitle">
-                    ✨ AI好评助手
-                    <span>霞浦·山予海</span>
-                </div>
+                <h1 id="secretTrigger">山予海民宿</h1>
+                <div class="subtitle"><span>✨ AI好评助手</span><span>霞浦·山予海</span></div>
             </div>
-
             <div class="form-group">
                 <label><i>✍️</i> 选择写作风格</label>
                 <select id="styleSelect">
@@ -360,20 +130,17 @@
                     <option value="攻略型">🗺️ 攻略型 · 完整游玩攻略</option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label><i>💬</i> 额外补充（可选）</label>
                 <textarea id="prompt" placeholder="例如：强调海景日出、步行到海滩3分钟、亲子房..."></textarea>
             </div>
-
             <button id="generateBtn" onclick="generate()">🌊 生成民宿好评</button>
-
             <div id="result" class="result-box"></div>
             <div class="footer">🌿 每一条好评，都是山海的回响</div>
         </div>
     </div>
 
-    <!-- ==================== 隐藏后台入口模态框 ==================== -->
+    <!-- 隐藏后台入口模态框 -->
     <div id="adminModal" class="modal-overlay">
         <div class="modal-box">
             <h3>🔐 管理员验证</h3>
@@ -384,65 +151,49 @@
     </div>
 
     <script>
-        // ========== merchant 参数检测 ==========
-        (function() {
+        // ===== merchant 参数检测 =====
+        (function(){
             const urlParams = new URLSearchParams(window.location.search);
             const merchantId = urlParams.get('merchant');
-            const noMerchantDiv = document.getElementById('noMerchant');
-            const mainAppDiv = document.getElementById('mainApp');
-
-            if (merchantId) {
-                // 有 merchant 参数，存储并显示主界面
+            if(merchantId) {
                 localStorage.setItem('current_merchant', merchantId);
-                noMerchantDiv.style.display = 'none';
-                mainAppDiv.style.display = '';
+                document.getElementById('noMerchant').style.display = 'none';
+                document.getElementById('mainApp').style.display = '';
             } else {
-                // 检查 localStorage 是否有之前存储的 merchant
-                const savedMerchant = localStorage.getItem('current_merchant');
-                if (savedMerchant) {
-                    noMerchantDiv.style.display = 'none';
-                    mainAppDiv.style.display = '';
+                if(localStorage.getItem('current_merchant')) {
+                    document.getElementById('noMerchant').style.display = 'none';
+                    document.getElementById('mainApp').style.display = '';
                 } else {
-                    // 无任何 merchant 信息，显示扫码页面
-                    noMerchantDiv.style.display = '';
-                    mainAppDiv.style.display = 'none';
+                    document.getElementById('noMerchant').style.display = '';
+                    document.getElementById('mainApp').style.display = 'none';
                 }
             }
         })();
 
-        // ========== 隐藏后台入口（连续点击 5 次标题） ==========
-        (function() {
-            const trigger = document.getElementById('secretTrigger');
-            let clickCount = 0;
-            let clickTimer = null;
-            trigger.addEventListener('click', () => {
-                clickCount++;
-                if (clickCount === 1) {
-                    clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
-                }
-                if (clickCount >= 5) {
-                    clearTimeout(clickTimer);
-                    clickCount = 0;
-                    document.getElementById('adminModal').style.display = 'flex';
-                }
-            });
-        })();
+        // ===== 隐藏后台入口 (连续点击标题5次) =====
+        const trigger = document.getElementById('secretTrigger');
+        let clickCount = 0, clickTimer = null;
+        trigger.addEventListener('click', ()=>{
+            clickCount++;
+            if(clickCount === 1) clickTimer = setTimeout(()=>{ clickCount = 0; }, 2000);
+            if(clickCount >= 5) {
+                clearTimeout(clickTimer); clickCount = 0;
+                document.getElementById('adminModal').style.display = 'flex';
+            }
+        });
 
-        function checkAdminPass() {
+        function checkAdminPass(){
             const pass = document.getElementById('adminPassInput').value;
-            if (pass === 'shanyuhai2024') {   // ⚠️ 请修改为你自己的密码
+            if(pass === 'shanyuhai2024') {   // ⚠️ 改成你自己的超级密码
                 window.location.href = '/admin.html';
             } else {
                 alert('密码错误');
             }
         }
+        function closeAdminModal(){ document.getElementById('adminModal').style.display = 'none'; }
 
-        function closeAdminModal() {
-            document.getElementById('adminModal').style.display = 'none';
-        }
-
-        // ========== 生成好评（按钮防重复 + 发送 merchant） ==========
-        async function generate() {
+        // ===== 生成好评 =====
+        async function generate(){
             const btn = document.getElementById('generateBtn');
             const style = document.getElementById('styleSelect').value;
             const prompt = document.getElementById('prompt').value.trim();
@@ -450,7 +201,6 @@
 
             btn.disabled = true;
             btn.innerText = '⏳ 正在生成中...';
-
             resultBox.classList.add('show');
             resultBox.innerText = '⏳ 山予海正在为您书写...';
             resultBox.style.color = '#1e3b4a';
@@ -460,18 +210,17 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        prompt: prompt,
-                        style: style,
+                        prompt, style,
                         merchant: localStorage.getItem('current_merchant') || ''
                     })
                 });
                 const data = await res.json();
-                if (data.result) {
+                if(data.result) {
                     resultBox.innerText = data.result;
                 } else {
                     throw new Error(data.error || '生成失败');
                 }
-            } catch (err) {
+            } catch(err) {
                 resultBox.innerText = '❌ ' + err.message;
                 resultBox.style.color = '#c44536';
             } finally {
@@ -480,6 +229,5 @@
             }
         }
     </script>
-
 </body>
 </html>
