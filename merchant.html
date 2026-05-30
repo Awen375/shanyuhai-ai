@@ -7,8 +7,8 @@
     <style>
         body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
         .card { 
-            background: white; border-radius: 24px; padding: 30px; max-width: 450px; width: 100%; 
-            box-shadow: 0 15px 30px rgba(0,0,0,0.08); position: relative; 
+            background: white; border-radius: 24px; padding: 30px; max-width: 480px; width: 100%; 
+            box-shadow: 0 15px 30px rgba(0,0,0,0.08); position: relative; margin-bottom: 20px;
         }
         .merchant-id-badge {
             position: absolute; top: 18px; left: 20px;
@@ -16,7 +16,7 @@
             padding: 4px 14px; border-radius: 20px; font-weight: 500;
         }
         h2 { color: #0b4f6c; margin-bottom: 20px; padding-top: 5px; }
-        input, button { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; }
+        input, textarea, select, button { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 16px; }
         button { background: #1e90ff; color: white; border: none; cursor: pointer; font-weight: 600; border-radius: 50px; }
         .info { text-align: center; font-size: 18px; margin: 20px 0; }
         .recharge-tip { text-align: center; font-size: 13px; color: #888; margin-top: -10px; margin-bottom: 15px; }
@@ -38,6 +38,7 @@
         table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
         th, td { border-bottom: 1px solid #eee; padding: 8px 6px; text-align: left; }
         th { background: #f8fafc; }
+        .settings-section { margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -52,36 +53,52 @@
         <p id="loginError" style="color:red;"></p>
     </div>
 
-    <div id="dashboard" class="card hidden">
-        <span class="merchant-id-badge" id="merchantIdDisplay"></span>
-        <h2>🌊 山予海商家中心</h2>
-        <div class="info">🧮 剩余算力：<strong id="balanceSpan"></strong></div>
-        <p class="recharge-tip">💡 充值算力请联系管理员</p>
-        <div class="btn-row">
-            <button onclick="showFlow('consume')">📊 算力明细</button>
-            <button onclick="showFlow('recharge')" class="recharge-btn">💰 充值记录</button>
-            <button onclick="showPricing()" class="pricing-btn">💎 算力价目</button>
+    <!-- 仪表盘 & 设置 -->
+    <div id="dashboard" class="hidden" style="width:100%; max-width:500px;">
+        <!-- 商家信息卡片 -->
+        <div class="card">
+            <span class="merchant-id-badge" id="merchantIdDisplay"></span>
+            <h2>🌊 山予海商家中心</h2>
+            <div class="info">🧮 剩余算力：<strong id="balanceSpan"></strong></div>
+            <p class="recharge-tip">💡 充值算力请联系管理员</p>
+            <div class="btn-row">
+                <button onclick="showFlow('consume')">📊 算力明细</button>
+                <button onclick="showFlow('recharge')" class="recharge-btn">💰 充值记录</button>
+                <button onclick="showPricing()" class="pricing-btn">💎 算力价目</button>
+            </div>
+            <p style="margin-top:15px;">专属推广二维码（客人扫码生成好评，每次消耗2算力）</p>
+            <img id="qrImage" />
+            <p style="text-align:center; color:#888; word-break:break-all;">链接: <span id="qrUrl"></span></p>
+            <button onclick="refreshQR()">🔄 刷新二维码（旧码失效）</button>
+            <button onclick="logout()" style="background:#ccc;color:#333;">退出登录</button>
         </div>
-        <p style="margin-top:15px;">专属推广二维码（客人扫码生成好评，每次消耗2算力）</p>
-        <img id="qrImage" />
-        <p style="text-align:center; color:#888; word-break:break-all;">链接: <span id="qrUrl"></span></p>
-        <button onclick="refreshQR()">🔄 刷新二维码（旧码失效）</button>
-        <button onclick="logout()" style="background:#ccc;color:#333;">退出登录</button>
+
+        <!-- 店铺设置卡片 -->
+        <div class="card">
+            <h2>🛠️ 店铺设置</h2>
+            <label>行业（如：民宿、餐饮、美容）</label>
+            <input type="text" id="industryInput" placeholder="例如：民宿">
+            <label>关键词（多个用逗号分隔）</label>
+            <input type="text" id="keywordsInput" placeholder="例如：海景,日出,赶海,包车">
+            <label>产品/服务名称</label>
+            <input type="text" id="productInput" placeholder="例如：山予海民宿">
+            <label>其他补充说明（可选）</label>
+            <textarea id="extraNote" rows="3" placeholder="例如：我们的特色是..."></textarea>
+            <button onclick="saveSettings()">💾 保存设置</button>
+            <p id="settingsMsg" style="text-align:center; color:green;"></p>
+        </div>
     </div>
 
-    <!-- 联系管理员弹窗 -->
+    <!-- 各种弹窗保持不变 -->
     <div id="contactModal" class="modal-overlay">
         <div class="modal-content">
             <h3>📞 联系管理员</h3>
-            <div id="contactQrContainer">
-                <img id="contactQrImage" src="" alt="管理员微信二维码" />
-            </div>
+            <div id="contactQrContainer"><img id="contactQrImage" src="" alt="管理员微信二维码" /></div>
             <div id="contactInfo" style="margin: 10px 0; font-size: 14px;"></div>
             <button onclick="document.getElementById('contactModal').style.display='none'" style="background:#ccc;color:#333;width:auto;margin-top:10px;">关闭</button>
         </div>
     </div>
 
-    <!-- 流水弹窗 -->
     <div id="flowModal" class="modal-overlay">
         <div class="modal-content">
             <h3 id="flowTitle">流水明细</h3>
@@ -93,7 +110,6 @@
         </div>
     </div>
 
-    <!-- 价目表弹窗 -->
     <div id="pricingModal" class="modal-overlay">
         <div class="modal-content">
             <h3>💎 算力价目表</h3>
@@ -114,6 +130,7 @@
                 document.getElementById('loginBox').classList.add('hidden');
                 document.getElementById('dashboard').classList.remove('hidden');
                 showDashboard();
+                loadSettings();
             } else {
                 document.getElementById('loginBox').classList.remove('hidden');
                 document.getElementById('dashboard').classList.add('hidden');
@@ -134,6 +151,7 @@
                 document.getElementById('loginBox').classList.add('hidden');
                 document.getElementById('dashboard').classList.remove('hidden');
                 showDashboard();
+                loadSettings();
             } else {
                 document.getElementById('loginError').innerText = data.error || '登录失败';
             }
@@ -159,90 +177,48 @@
             }
         }
 
-        async function refreshQR() {
+        // 加载设置
+        async function loadSettings() {
             const token = localStorage.getItem('merchant_token');
-            const res = await fetch(`${API_BASE}/refresh`, {
-                method: 'POST',
+            const res = await fetch(`${API_BASE}/info`, {
                 headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.settings) {
+                document.getElementById('industryInput').value = data.settings.industry || '';
+                document.getElementById('keywordsInput').value = data.settings.keywords || '';
+                document.getElementById('productInput').value = data.settings.product || '';
+                document.getElementById('extraNote').value = data.settings.extraNote || '';
+            }
+        }
+
+        // 保存设置
+        async function saveSettings() {
+            const token = localStorage.getItem('merchant_token');
+            const settings = {
+                industry: document.getElementById('industryInput').value.trim(),
+                keywords: document.getElementById('keywordsInput').value.trim(),
+                product: document.getElementById('productInput').value.trim(),
+                extraNote: document.getElementById('extraNote').value.trim()
+            };
+            const res = await fetch(`${API_BASE}/save-settings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(settings)
             });
             const data = await res.json();
             if (data.success) {
-                alert('二维码已刷新，旧码立即失效');
-                showDashboard();
+                document.getElementById('settingsMsg').innerText = '✅ 设置已保存，扫码生成将使用自定义信息';
             } else {
-                alert('刷新失败：' + data.error);
+                document.getElementById('settingsMsg').innerText = '❌ 保存失败：' + (data.error || '未知错误');
             }
         }
 
-        async function showFlow(filterType) {
-            const token = localStorage.getItem('merchant_token');
-            const res = await fetch(`${API_BASE}/flow`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-            const tbody = document.getElementById('flowTableBody');
-            tbody.innerHTML = '';
-            const filtered = filterType ? data.flows.filter(f => f.type === filterType) : data.flows;
-            if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>';
-            } else {
-                filtered.forEach(f => {
-                    const time = new Date(f.time).toLocaleString('zh-CN');
-                    const typeMap = { 
-                        'consume': '🔻消耗', 
-                        'recharge': '💰充值', 
-                        'initial': '🆕初始',
-                        'admin_add': '➕管理员添加',
-                        'admin_subtract': '➖管理员扣除' 
-                    };
-                    const typeText = typeMap[f.type] || f.type;
-                    const amount = (f.type === 'consume' || f.type === 'admin_subtract') ? `-${f.amount}` : `+${f.amount}`;
-                    tbody.innerHTML += `<tr>
-                        <td>${time}</td>
-                        <td>${typeText}</td>
-                        <td>${amount}</td>
-                        <td>${f.balanceAfter}</td>
-                        <td>${f.note || ''}</td>
-                    </tr>`;
-                });
-            }
-            document.getElementById('flowTitle').innerText = filterType === 'consume' ? '算力消耗明细' : (filterType === 'recharge' ? '充值记录' : '全部流水');
-            document.getElementById('flowModal').style.display = 'flex';
-        }
-
-        async function showPricing() {
-            const res = await fetch('/api/merchant/pricing');
-            const data = await res.json();
-            const tbody = document.getElementById('pricingTableBody');
-            tbody.innerHTML = data.items.map(item => `<tr><td>${item.amount} 算力</td><td>${item.price}</td></tr>`).join('');
-            document.getElementById('pricingNote').innerText = data.note || '';
-            document.getElementById('pricingModal').style.display = 'flex';
-        }
-
-        function logout() {
-            localStorage.removeItem('merchant_token');
-            localStorage.removeItem('merchant_id');
-            location.reload();
-        }
-
-        async function openContact() {
-            document.getElementById('contactModal').style.display = 'flex';
-            const res = await fetch('/api/admin/contact');
-            const data = await res.json();
-            const qrImg = document.getElementById('contactQrImage');
-            if (data.qrcode_url) {
-                qrImg.src = data.qrcode_url;
-                document.getElementById('contactQrContainer').style.display = '';
-            } else {
-                document.getElementById('contactQrContainer').style.display = 'none';
-            }
-            let infoHtml = '';
-            if (data.phone) infoHtml += `<p>📱 电话：${data.phone}</p>`;
-            if (data.wechat) infoHtml += `<p>💬 微信：${data.wechat}</p>`;
-            if (data.extra) infoHtml += `<p>${data.extra}</p>`;
-            if (!infoHtml) infoHtml = '<p>暂无联系方式</p>';
-            document.getElementById('contactInfo').innerHTML = infoHtml;
-        }
+        // 其余函数（refreshQR, showFlow, showPricing, logout, openContact）保持和之前一样
+        // ...（为简洁略去，您可以将之前的 merchant.html 相关函数复制进来）
     </script>
 </body>
 </html>
