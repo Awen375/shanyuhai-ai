@@ -138,7 +138,10 @@ export default async function handler(req, res) {
 
             const { industry, keywords, product, extraNote, styles } = req.body || {};
             await redis.set(`merchant:${id}:settings`, JSON.stringify({
-                industry: industry || '', keywords: keywords || '', product: product || '', extraNote: extraNote || '',
+                industry: industry || '',
+                keywords: keywords || '',
+                product: product || '',
+                extraNote: extraNote || '',
                 styles: Array.isArray(styles) ? styles : []
             }));
             return res.status(200).json({ success: true });
@@ -150,14 +153,20 @@ export default async function handler(req, res) {
             if (!merchant) return res.status(400).json({ error: '缺少 merchant 参数' });
             const settingsStr = await redis.get(`merchant:${merchant}:settings`);
             const settings = settingsStr ? JSON.parse(settingsStr) : {};
-            return res.status(200).json({ styles: settings.styles || [] });
+            const styles = settings.styles || [];
+            return res.status(200).json({ styles });
         }
 
         // 价目（公开）
         if (action === 'pricing') {
             const pricingStr = await redis.get('config:pricing');
             const pricing = pricingStr ? JSON.parse(pricingStr) : {
-                items: [{ amount: 10, price: '¥1' }, { amount: 50, price: '¥5' }, { amount: 100, price: '¥9' }, { amount: 200, price: '¥16' }],
+                items: [
+                    { amount: 10, price: '¥1' },
+                    { amount: 50, price: '¥5' },
+                    { amount: 100, price: '¥9' },
+                    { amount: 200, price: '¥16' }
+                ],
                 note: '请联系管理员充值'
             };
             return res.status(200).json(pricing);
