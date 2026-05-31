@@ -217,10 +217,11 @@
             panel.style.display = panel.style.display === 'none' ? '' : 'none';
         }
 
-        // ---------- 商家列表 ----------
+        // ---------- 商家列表（带调试输出和默认名称）----------
         async function loadMerchants() {
             const res = await fetch('/api/admin/merchants', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
+            console.log('商家数据:', data);  // 调试输出
             const tbody = document.querySelector('#merchantTable tbody');
             tbody.innerHTML = '';
             const statSelect = document.getElementById('statMerchantSelect');
@@ -231,7 +232,7 @@
                     const statusText = m.status === 'banned' ? '🚫已封' : '✅正常';
                     tbody.innerHTML += `<tr>
                         <td>${m.id}</td>
-                        <td>${m.name || ''}</td>
+                        <td>${m.name || '未命名'}</td>
                         <td>${m.balance}</td>
                         <td>${statusText}</td>
                         <td>
@@ -245,7 +246,7 @@
                             }
                         </td>
                     </tr>`;
-                    statSelect.innerHTML += `<option value="${m.id}">${m.id} - ${m.name||''}</option>`;
+                    statSelect.innerHTML += `<option value="${m.id}">${m.name || m.id}</option>`;
                 });
             }
         }
