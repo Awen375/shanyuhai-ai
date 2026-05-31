@@ -91,6 +91,8 @@
         .modal-box input { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; margin: 15px 0; font-size: 16px; }
         .modal-box button { width: auto; margin: 5px; }
         .modal-box img { max-width: 200px; margin: 10px auto; }
+        .emoji-check { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 14px; color: #1a3c4a; }
+        .emoji-check input { width: 18px; height: 18px; }
         @media (max-width: 480px) {
             .container { padding: 25px 20px; border-radius: 28px; }
             h1 { font-size: 26px; }
@@ -129,6 +131,11 @@
                     <option value="dianping">⭐ 大众点评</option>
                     <option value="douyin">🎵 抖音</option>
                 </select>
+            </div>
+            <!-- 新增表情勾选框 -->
+            <div class="emoji-check">
+                <input type="checkbox" id="useEmojiCheck" checked>
+                <label for="useEmojiCheck">在文案中添加表情符号 (emoji)</label>
             </div>
             <div class="form-group">
                 <label for="styleSelect"><i>✍️</i> 选择写作风格</label>
@@ -265,6 +272,7 @@
         async function generate() {
             const btn = document.getElementById('generateBtn');
             const platform = document.getElementById('platformSelect').value;
+            const useEmoji = document.getElementById('useEmojiCheck').checked;
             const style = document.getElementById('styleSelect').value;
             const prompt = document.getElementById('prompt').value.trim();
             const resultBox = document.getElementById('result');
@@ -278,6 +286,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         platform,
+                        useEmoji,
                         style,
                         prompt,
                         merchant: localStorage.getItem('current_merchant') || '',
