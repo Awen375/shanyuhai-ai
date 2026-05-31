@@ -123,6 +123,14 @@
                 <div class="subtitle"><span>✨ AI好评助手</span><span>霞浦·山予海</span></div>
             </div>
             <div class="form-group">
+                <label for="platformSelect"><i>📱</i> 选择平台</label>
+                <select id="platformSelect">
+                    <option value="xiaohongshu">📕 小红书文案</option>
+                    <option value="dianping">⭐ 大众点评</option>
+                    <option value="douyin">🎵 抖音</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="styleSelect"><i>✍️</i> 选择写作风格</label>
                 <select id="styleSelect"></select>
             </div>
@@ -130,7 +138,7 @@
                 <label for="prompt"><i>💬</i> 额外补充（可选）</label>
                 <textarea id="prompt" placeholder="例如：强调海景日出、步行到海滩3分钟、亲子房..."></textarea>
             </div>
-            <button id="generateBtn" onclick="generate()">🌊 生成民宿好评</button>
+            <button id="generateBtn" onclick="generate()">🌊 生成好评</button>
             <div id="result" class="result-box"></div>
             <div class="footer">🌿 每一条好评，都是山海的回响</div>
         </div>
@@ -158,7 +166,26 @@
         const urlParams = new URLSearchParams(window.location.search);
         const merchantId = urlParams.get('merchant');
         const tokenVal = urlParams.get('token') || '';
-        const defaultStyles = ["情绪共鸣型","宝藏发现型","氛围描绘型","干货整理型","攻略型"];
+
+        const defaultStyles = ["情绪共鸣型", "宝藏发现型", "氛围描绘型", "干货整理型", "攻略型"];
+
+        function setDefaultStyles() {
+            document.getElementById('styleSelect').innerHTML = defaultStyles.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        async function loadStyles(merchant) {
+            try {
+                const res = await fetch(`/api/merchant/styles?merchant=${merchant}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.styles && data.styles.length > 0) {
+                        document.getElementById('styleSelect').innerHTML = data.styles.map(s => `<option value="${s}">${s}</option>`).join('');
+                        return;
+                    }
+                }
+            } catch(e) {}
+            setDefaultStyles();
+        }
 
         if (merchantId) {
             localStorage.setItem('current_merchant', merchantId);
@@ -179,24 +206,6 @@
                 document.getElementById('mainApp').style.display = 'none';
                 setDefaultStyles();
             }
-        }
-
-        function setDefaultStyles() {
-            document.getElementById('styleSelect').innerHTML = defaultStyles.map(s => `<option value="${s}">${s}</option>`).join('');
-        }
-
-        async function loadStyles(merchant) {
-            try {
-                const res = await fetch(`/api/merchant/styles?merchant=${merchant}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.styles && data.styles.length > 0) {
-                        document.getElementById('styleSelect').innerHTML = data.styles.map(s => `<option value="${s}">${s}</option>`).join('');
-                        return;
-                    }
-                }
-            } catch(e) {}
-            setDefaultStyles();
         }
 
         function exitMerchant() {
@@ -255,6 +264,7 @@
 
         async function generate() {
             const btn = document.getElementById('generateBtn');
+            const platform = document.getElementById('platformSelect').value;
             const style = document.getElementById('styleSelect').value;
             const prompt = document.getElementById('prompt').value.trim();
             const resultBox = document.getElementById('result');
@@ -267,7 +277,9 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        prompt, style,
+                        platform,
+                        style,
+                        prompt,
                         merchant: localStorage.getItem('current_merchant') || '',
                         token: localStorage.getItem('current_token') || ''
                     })
@@ -282,7 +294,7 @@
                 resultBox.innerText = '❌ ' + err.message;
             } finally {
                 btn.disabled = false;
-                btn.innerText = '🌊 生成民宿好评';
+                btn.innerText = '🌊 生成好评';
             }
         }
     </script>
