@@ -15,7 +15,7 @@ const defaultStyleGuides = {
 
 const platformGuides = {
     xiaohongshu: "请生成一篇小红书风格的笔记，语气亲切活泼，适当使用网络用语。",
-    dianping: "请生成一篇大众点评风格的点评，客观真实，列出优点和不足，给出综合评分。",
+    dianping: "请生成一篇大众点评风格的点评，客观真实，列出优点和特别突出的店，给满分评分。",
     douyin: "请生成一段抖音风格的口播文案，节奏明快，使用短句和热门话题标签。"
 };
 
