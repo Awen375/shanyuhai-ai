@@ -1,8 +1,9 @@
 const REDIS_URL = process.env.KV_REST_API_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN;
 
-async function redisSet(key, value) {
-    const strValue = typeof value === 'string' ? value : JSON.stringify(value);
+// 安全 set
+async function redisSet(key, obj) {
+    const strValue = JSON.stringify(obj);
     const body = JSON.stringify({ value: strValue });
     await fetch(`${REDIS_URL}/set/${key}`, {
         method: 'POST',
@@ -40,7 +41,6 @@ export default async function handler(req, res) {
         const rawAction = pathOnly.replace('/api/merchant/', '').replace('/api/merchant', '');
         const action = rawAction || '';
 
-        // 登录
         if (req.method === 'POST' && action === 'login') {
             const { id, password } = req.body || {};
             if (!id || !password) return res.status(400).json({ error: '缺少参数' });
@@ -56,7 +56,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ token, name: merchant.name, balance: merchant.balance, token_val: merchant.token_val });
         }
 
-        // 信息
         if (action === 'info') {
             const auth = req.headers.authorization;
             if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '未登录' });
@@ -71,7 +70,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ id, name: merchant.name, balance: merchant.balance, token_val: merchant.token_val || '', settings });
         }
 
-        // 刷新二维码
         if (req.method === 'POST' && action === 'refresh') {
             const auth = req.headers.authorization;
             if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '未登录' });
@@ -88,7 +86,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true, token_val: newToken });
         }
 
-        // 流水
         if (action === 'flow') {
             const auth = req.headers.authorization;
             if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '未登录' });
@@ -109,7 +106,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ flows });
         }
 
-        // 修改密码
         if (req.method === 'POST' && action === 'change-password') {
             const auth = req.headers.authorization;
             if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '未登录' });
@@ -128,7 +124,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // 保存设置
         if (req.method === 'POST' && action === 'save-settings') {
             const auth = req.headers.authorization;
             if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '未登录' });
@@ -150,7 +145,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // 风格（公开）
         if (action === 'styles') {
             const { merchant } = req.query;
             if (!merchant) return res.status(400).json({ error: '缺少 merchant 参数' });
@@ -158,7 +152,6 @@ export default async function handler(req, res) {
             return res.status(200).json({ styles: settings.styles || [] });
         }
 
-        // 价目（公开）
         if (action === 'pricing') {
             const pricing = await redisGet('config:pricing') || {
                 items: [
