@@ -99,7 +99,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // 保存设置
+        // 保存设置（含 location）
         if (req.method === 'POST' && action === 'save-settings') {
             const auth = req.headers.authorization;
             if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: '未登录' });
@@ -110,11 +110,12 @@ export default async function handler(req, res) {
             if (!merchant) return res.status(401).json({ error: '登录信息失效' });
             if (merchant.password !== password) return res.status(401).json({ error: '登录信息失效' });
 
-            const { industry, keywords, product, extraNote, styles } = req.body || {};
+            const { industry, keywords, product, location, extraNote, styles } = req.body || {};
             await redis.set(`merchant:${id}:settings`, {
                 industry: industry || '',
                 keywords: keywords || '',
                 product: product || '',
+                location: location || '',
                 extraNote: extraNote || '',
                 styles: Array.isArray(styles) ? styles : []
             });
