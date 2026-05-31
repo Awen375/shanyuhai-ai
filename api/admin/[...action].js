@@ -32,7 +32,7 @@ const redis = {
 
 export default async function handler(req, res) {
     try {
-        const pathOnly = req.url.split('?')[0];                     // e.g., /api/admin or /api/admin/merchants
+        const pathOnly = req.url.split('?')[0];                     // /api/admin 或 /api/admin/merchants 等
         const rawAction = pathOnly.replace('/api/admin/', '').replace('/api/admin', '');
         const action = rawAction || '';
 
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
             return res.status(200).json(data);
         }
 
-        // 日志（/api/admin 或 /api/admin/logs）
+        // ★ 修复空路径 /api/admin 和 /api/admin/logs ★
         if (action === '' || action === 'logs') {
             if (!checkAdmin()) return;
             const keys = await redis.keys('log:*');
@@ -165,7 +165,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 配置
+        // 配置管理
         if (action === 'config') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
@@ -183,7 +183,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 联系方式
+        // 联系方式设置
         if (action === 'contact' && req.method === 'POST') {
             if (!checkAdmin()) return;
             const { qrcode_url, phone, wechat, extra } = req.body;
@@ -207,7 +207,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 直接登录商家
+        // 直接登录商家后台
         if (action === 'login-as-merchant') {
             if (!checkAdmin()) return;
             if (req.method !== 'POST') return res.status(405).json({ error: '只支持POST' });
