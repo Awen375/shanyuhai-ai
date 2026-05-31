@@ -69,19 +69,19 @@
             <div id="contactPanel" style="display:none;">
                 <div class="flex-row">
                     <span class="label">微信二维码URL：</span>
-                    <input type="text" id="contactQrcode" placeholder="https://example.com/qr.jpg" style="width:300px;">
+                    <input type="text" id="contactQrcode" name="contactQrcode" placeholder="https://example.com/qr.jpg" style="width:300px;">
                 </div>
                 <div class="flex-row">
                     <span class="label">管理员电话：</span>
-                    <input type="text" id="contactPhone" placeholder="13800138000" style="width:200px;">
+                    <input type="text" id="contactPhone" name="contactPhone" placeholder="13800138000" style="width:200px;">
                 </div>
                 <div class="flex-row">
                     <span class="label">管理员微信：</span>
-                    <input type="text" id="contactWechat" placeholder="shanyuhai_kefu" style="width:200px;">
+                    <input type="text" id="contactWechat" name="contactWechat" placeholder="shanyuhai_kefu" style="width:200px;">
                 </div>
                 <div class="flex-row">
                     <span class="label">其他说明：</span>
-                    <input type="text" id="contactExtra" placeholder="工作时间 9:00-21:00" style="width:300px;">
+                    <input type="text" id="contactExtra" name="contactExtra" placeholder="工作时间 9:00-21:00" style="width:300px;">
                 </div>
                 <button onclick="saveContact()">💾 保存联系方式</button>
             </div>
@@ -95,7 +95,7 @@
                 <button onclick="addPricingRow()">+ 添加一行</button>
                 <div class="flex-row" style="margin-top:10px;">
                     <span class="label">备注说明：</span>
-                    <input type="text" id="pricingNoteInput" placeholder="例如：请联系管理员充值" style="width:300px;">
+                    <input type="text" id="pricingNoteInput" name="pricingNote" placeholder="例如：请联系管理员充值" style="width:300px;">
                 </div>
                 <button onclick="savePricing()">💾 保存价目表</button>
             </div>
@@ -401,23 +401,27 @@
         async function loadPricing() {
             const res = await fetch('/api/admin/pricing', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
-            if (!data || !data.items) {
-                console.error('价目表数据错误:', data);
-                return;
+            let pricing = data;
+            if (data && data.value && typeof data.value === 'string') {
+                try { pricing = JSON.parse(data.value); } catch(e) {}
+            }
+            if (!pricing || !Array.isArray(pricing.items)) {
+                console.error('价目表数据错误:', pricing);
+                pricing = { items: [], note: '' };
             }
             const container = document.getElementById('pricingItemsContainer');
             container.innerHTML = '';
-            data.items.forEach(item => {
+            pricing.items.forEach(item => {
                 const row = document.createElement('div');
                 row.className = 'flex-row';
                 row.innerHTML = `
-                    <span>算力：<input type="number" value="${item.amount}" class="pricing-amount" style="width:80px;"></span>
-                    <span>价格：<input type="text" value="${item.price}" class="pricing-price" style="width:80px;"></span>
+                    <span>算力：<input type="number" name="amount" value="${item.amount}" class="pricing-amount" style="width:80px;"></span>
+                    <span>价格：<input type="text" name="price" value="${item.price}" class="pricing-price" style="width:80px;"></span>
                     <button onclick="this.parentElement.remove()" class="danger">删除</button>
                 `;
                 container.appendChild(row);
             });
-            document.getElementById('pricingNoteInput').value = data.note || '';
+            document.getElementById('pricingNoteInput').value = pricing.note || '';
         }
 
         function addPricingRow() {
@@ -425,8 +429,8 @@
             const row = document.createElement('div');
             row.className = 'flex-row';
             row.innerHTML = `
-                <span>算力：<input type="number" value="10" class="pricing-amount" style="width:80px;"></span>
-                <span>价格：<input type="text" value="¥1" class="pricing-price" style="width:80px;"></span>
+                <span>算力：<input type="number" name="amount" value="10" class="pricing-amount" style="width:80px;"></span>
+                <span>价格：<input type="text" name="price" value="¥1" class="pricing-price" style="width:80px;"></span>
                 <button onclick="this.parentElement.remove()" class="danger">删除</button>
             `;
             container.appendChild(row);
