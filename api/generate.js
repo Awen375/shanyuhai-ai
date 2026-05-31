@@ -70,18 +70,25 @@ export default async function handler(req, res) {
     const { prompt, style, merchant: merchantId, token: qrToken } = req.body;
     if (!style) return res.status(400).json({ error: '请选择写作风格' });
 
-    if (!merchantId) return res.status(400).json({ error: '请通过商家二维码访问' });
+    if (!merchantId) {
+        return res.status(400).json({ error: '请通过商家二维码访问' });
+    }
 
     const merchantStr = await redis.get(`merchant:${merchantId}`);
     const merchant = merchantStr ? JSON.parse(merchantStr) : null;
     if (!merchant) return res.status(400).json({ error: '无效商家' });
     if (merchant.status === 'banned') return res.status(403).json({ error: '该商家已被封禁' });
-    if (merchant.token_val && merchant.token_val !== qrToken) return res.status(400).json({ error: '二维码已失效，请获取最新二维码' });
+    if (merchant.token_val && merchant.token_val !== qrToken) {
+        return res.status(400).json({ error: '二维码已失效，请获取最新二维码' });
+    }
     if (merchant.balance < 2) return res.status(402).json({ error: '商家算力不足' });
 
     const settingsStr = await redis.get(`merchant:${merchantId}:settings`);
     const settings = settingsStr ? JSON.parse(settingsStr) : {};
-    if (!settings.industry && !settings.product) return res.status(400).json({ error: '该商家尚未设置行业和产品信息，请联系商家完善' });
+
+    if (!settings.industry && !settings.product) {
+        return res.status(400).json({ error: '该商家尚未设置行业和产品信息，请联系商家完善' });
+    }
 
     let facts = '你是一位专业的小红书好评写手。请为以下产品/服务写一篇好评：\n';
     if (settings.industry) facts += `行业：${settings.industry}\n`;
@@ -96,12 +103,21 @@ export default async function handler(req, res) {
 
     const flowKey = `flow:${merchantId}:${Date.now()}`;
     await redis.set(flowKey, JSON.stringify({
-        type: 'consume', amount: 2, balanceAfter: merchant.balance,
-        time: new Date().toISOString(), note: `生成好评消耗 - 使用者IP: ${userIP}`
+        type: 'consume',
+        amount: 2,
+        balanceAfter: merchant.balance,
+        time: new Date().toISOString(),
+        note: `生成好评消耗 - 使用者IP: ${userIP}`
     }));
     await redis.expire(flowKey, 60 * 60 * 24 * 30);
 
-    const logEntry = { time: new Date().toISOString(), ip: userIP, merchant: merchantId, style, prompt: prompt || '' };
+    const logEntry = {
+        time: new Date().toISOString(),
+        ip: userIP,
+        merchant: merchantId,
+        style,
+        prompt: prompt || ''
+    };
     const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2,8)}`;
     await redis.set(logKey, JSON.stringify(logEntry));
     await redis.expire(logKey, 60 * 60 * 24 * 30);
