@@ -1,44 +1,9 @@
-const REDIS_URL = process.env.KV_REST_API_URL;
-const REDIS_TOKEN = process.env.KV_REST_API_TOKEN;
+import { Redis } from '@upstash/redis';
 
-const redis = {
-    async get(key) {
-        const res = await fetch(`${REDIS_URL}/get/${key}`, {
-            headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
-        });
-        const data = await res.json();
-        let val = data.result !== undefined ? data.result : (data.value || null);
-        if (typeof val === 'string') {
-            try { val = JSON.parse(val); } catch (e) {}
-        }
-        return val;
-    },
-    async set(key, value) {
-        const strValue = typeof value === 'string' ? value : JSON.stringify(value);
-        const body = JSON.stringify({ value: strValue });
-        await fetch(`${REDIS_URL}/set/${key}`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${REDIS_TOKEN}`,
-                'Content-Type': 'application/json'
-            },
-            body
-        });
-    },
-    async expire(key, seconds) {
-        await fetch(`${REDIS_URL}/expire/${key}/${seconds}`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
-        });
-    },
-    async keys(pattern) {
-        const res = await fetch(`${REDIS_URL}/keys/${pattern}`, {
-            headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
-        });
-        const data = await res.json();
-        return data.result || [];
-    }
-};
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 const defaultStyleGuides = {
     "情绪共鸣型": "你是感情细腻的体验者。用第一人称写小红书好评，抒发内心感动、放松与共鸣，带emoji和话题标签。",
