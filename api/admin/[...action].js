@@ -6,7 +6,7 @@ const redis = {
       headers: { Authorization: `Bearer ${this.token}` }
     });
     const data = await res.json();
-    return data.result;
+    return data.result !== undefined ? data.result : (data.value || null);
   },
   async set(key, value) {
     await fetch(`${this.baseUrl}/set/${key}`, {
@@ -79,7 +79,8 @@ export default async function handler(req, res) {
                 const settingsStr = await redis.get(`merchant:${id}:settings`);
                 const settings = settingsStr ? JSON.parse(settingsStr) : {};
                 return res.status(200).json({
-                    id, name: merchant.name,
+                    id,
+                    name: merchant.name,
                     password: merchant.password,
                     balance: merchant.balance,
                     status: merchant.status,
@@ -222,7 +223,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // ★ 价目表管理 ★
+        // 价目表管理
         if (action === 'pricing') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
