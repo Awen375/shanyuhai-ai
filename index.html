@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>山予海民宿 · AI好评助手</title>
+    <title>山予海AI · 文案助手</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -103,13 +103,13 @@
 <body>
 
     <div id="noMerchant" class="scan-reminder">
-        <div style="font-size: 60px;">🌊</div>
-        <h2 id="scanTitle">山予海民宿 · AI好评助手</h2>
-        <p>请扫描民宿提供的专属二维码使用</p>
-        <p style="color: #888; font-size: 14px;">如有疑问，请联系民宿管家</p>
+<img src="/logo.png" alt="logo" class="logo-icon" style="width: 80px; height: auto;" />
+        <h2 id="scanTitle">山予海AI文案助手</h2>
+        <p>请扫描商家提供的专属二维码使用</p>
+        <p style="color: #888; font-size: 14px;">如有疑问，请联系山予海AI技术团队</p>
         <div class="scan-buttons">
-            <a href="/merchant.html" class="scan-btn">🏪 商家登录</a>
-            <span class="scan-btn" onclick="openContact()">📞 联系管理员</span>
+            <a href="/merchant.html" class="scan-btn">商家登录</a>
+            <span class="scan-btn" onclick="openContact()">联系管理员</span>
         </div>
     </div>
 
@@ -120,9 +120,9 @@
                 <button onclick="exitMerchant()" style="width:auto; padding:6px 16px; background:#ccc; color:#333; border:none; border-radius:20px; cursor:pointer; font-size:13px;">退出</button>
             </div>
             <div class="header">
-                <div class="logo-icon">🌊</div>
-                <h1 id="mainTitle">山予海民宿</h1>
-                <div class="subtitle"><span>✨ AI好评助手</span><span>霞浦·山予海</span></div>
+<img src="/logo.png" alt="logo" class="logo-icon" style="width: 80px; height: auto;" />
+                <h1 id="mainTitle">山予海AI文案助手</h1>
+                <div class="subtitle"><span>✨ AI好评助手</span><span>山予海AI大模型</span></div>
             </div>
             <div class="form-group">
                 <label for="platformSelect"><i>📱</i> 选择平台</label>
@@ -145,9 +145,9 @@
                 <label for="prompt"><i>💬</i> 额外补充（可选）</label>
                 <textarea id="prompt" placeholder="例如：强调海景日出、步行到海滩3分钟、亲子房..."></textarea>
             </div>
-            <button id="generateBtn" onclick="generate()">🌊 生成好评</button>
+            <button id="generateBtn" onclick="generate()">生成好评</button>
             <div id="result" class="result-box"></div>
-            <div class="footer">🌿 每一条好评，都是山海的回响</div>
+            <div class="footer">本程序由，山予海AI大模型团队提供技术支持。</div>
         </div>
     </div>
 
@@ -303,7 +303,7 @@
                 resultBox.innerText = '❌ ' + err.message;
             } finally {
                 btn.disabled = false;
-                btn.innerText = '🌊 生成好评';
+                btn.innerText = '生成好评';
             }
         }
     </script>
