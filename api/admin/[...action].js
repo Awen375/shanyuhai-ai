@@ -7,9 +7,8 @@ const redis = {
     });
     const data = await res.json();
     let val = data.result !== undefined ? data.result : (data.value || null);
-    // 安全解析：只有当 val 是字符串时才尝试 JSON.parse，解析失败返回原字符串
     if (typeof val === 'string') {
-      try { val = JSON.parse(val); } catch (e) { /* 保持原字符串 */ }
+      try { val = JSON.parse(val); } catch (e) {}
     }
     return val;
   },
@@ -51,13 +50,13 @@ export default async function handler(req, res) {
             return true;
         };
 
-        // 公开：联系方式读取
+        // 联系方式读取
         if (action === 'contact' && req.method === 'GET') {
-            const data = await redis.get('config:contact');
-            return res.status(200).json(data || {});
+            const data = await redis.get('config:contact') || {};
+            return res.status(200).json(data);
         }
 
-        // 日志（/api/admin 或 /api/admin/logs）
+        // 日志
         if (action === '' || action === 'logs') {
             if (!checkAdmin()) return;
             const keys = await redis.keys('log:*');
@@ -65,7 +64,7 @@ export default async function handler(req, res) {
             for (const key of keys) {
                 const raw = await redis.get(key);
                 if (raw) {
-                    try { records.push(typeof raw === 'string' ? JSON.parse(raw) : raw); } catch (e) {}
+                    records.push(typeof raw === 'string' ? JSON.parse(raw) : raw);
                 }
             }
             records.sort((a, b) => new Date(b.time) - new Date(a.time));
@@ -76,6 +75,7 @@ export default async function handler(req, res) {
         if (action === 'merchants') {
             if (!checkAdmin()) return;
 
+            // 详情
             if (req.method === 'GET' && req.query?.action === 'detail') {
                 const { id } = req.query;
                 if (!id) return res.status(400).json({ error: '缺少id' });
@@ -91,6 +91,7 @@ export default async function handler(req, res) {
                     settings
                 });
             }
+            // 流水
             if (req.method === 'GET' && req.query?.action === 'flow') {
                 const { merchant } = req.query;
                 if (!merchant) return res.status(400).json({ error: '缺少merchant' });
@@ -98,13 +99,12 @@ export default async function handler(req, res) {
                 const flows = [];
                 for (const key of keys) {
                     const raw = await redis.get(key);
-                    if (raw) {
-                        try { flows.push(typeof raw === 'string' ? JSON.parse(raw) : raw); } catch (e) {}
-                    }
+                    if (raw) flows.push(typeof raw === 'string' ? JSON.parse(raw) : raw);
                 }
                 flows.sort((a, b) => new Date(b.time) - new Date(a.time));
                 return res.status(200).json({ flows });
             }
+            // 统计
             if (req.method === 'GET' && req.query?.action === 'stats') {
                 const { merchant, start, end } = req.query;
                 if (!merchant || !start || !end) return res.status(400).json({ error: '参数不全' });
@@ -114,27 +114,26 @@ export default async function handler(req, res) {
                 for (const key of keys) {
                     const raw = await redis.get(key);
                     if (!raw) continue;
-                    try {
-                        const log = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                        if (log.merchant === merchant) {
-                            const d = new Date(log.time);
-                            if (d >= sd && d <= ed) {
-                                total++;
-                                const ds = d.toISOString().slice(0, 10);
-                                daily[ds] = (daily[ds] || 0) + 1;
-                            }
+                    const log = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                    if (log.merchant === merchant) {
+                        const d = new Date(log.time);
+                        if (d >= sd && d <= ed) {
+                            total++;
+                            const ds = d.toISOString().slice(0, 10);
+                            daily[ds] = (daily[ds] || 0) + 1;
                         }
-                    } catch (e) {}
+                    }
                 }
                 return res.status(200).json({ total, daily });
             }
+            // 列表（❌ 修复：不再对已经解析的对象使用 JSON.parse）
             if (req.method === 'GET') {
                 const keys = await redis.keys('merchant:*');
                 const merchants = [];
                 for (const key of keys) {
                     if (key.includes(':settings')) continue;
                     const m = await redis.get(key);
-                    if (m) {
+                    if (m && typeof m === 'object') {
                         merchants.push({
                             id: key.replace('merchant:', ''),
                             name: m.name || '',
@@ -145,6 +144,7 @@ export default async function handler(req, res) {
                 }
                 return res.status(200).json({ merchants });
             }
+            // 新增
             if (req.method === 'POST') {
                 const { id, name, password, balance } = req.body;
                 if (!id || !password) return res.status(400).json({ error: '缺少参数' });
@@ -159,6 +159,7 @@ export default async function handler(req, res) {
                 await redis.set(`merchant:${id}`, JSON.stringify(newMerchant));
                 return res.status(200).json({ success: true });
             }
+            // 修改
             if (req.method === 'PUT') {
                 const { id, amount, type, note, password, status } = req.body;
                 if (!id) return res.status(400).json({ error: '缺少id' });
@@ -193,6 +194,7 @@ export default async function handler(req, res) {
                 }
                 return res.status(400).json({ error: '无效请求' });
             }
+            // 删除
             if (req.method === 'DELETE') {
                 const { id } = req.body;
                 if (!id) return res.status(400).json({ error: '缺少id' });
@@ -217,7 +219,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 联系方式设置
+        // 联系方式
         if (action === 'contact' && req.method === 'POST') {
             if (!checkAdmin()) return;
             const { qrcode_url, phone, wechat, extra } = req.body;
@@ -225,7 +227,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // 价目表管理
+        // 价目表
         if (action === 'pricing') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
@@ -248,7 +250,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 直接登录商家后台
+        // 登录为商家
         if (action === 'login-as-merchant') {
             if (!checkAdmin()) return;
             if (req.method !== 'POST') return res.status(405).json({ error: '只支持POST' });
