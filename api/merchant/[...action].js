@@ -8,7 +8,7 @@ const redis = {
     const data = await res.json();
     let val = data.result !== undefined ? data.result : (data.value || null);
     if (typeof val === 'string') {
-      try { val = JSON.parse(val); } catch(e) {}
+      try { val = JSON.parse(val); } catch (e) {}
     }
     return val;
   },
@@ -38,9 +38,8 @@ export default async function handler(req, res) {
         if (req.method === 'POST' && action === 'login') {
             const { id, password } = req.body || {};
             if (!id || !password) return res.status(400).json({ error: '缺少参数' });
-            const merchantStr = await redis.get(`merchant:${id}`);
-            if (!merchantStr) return res.status(401).json({ error: '账号或密码错误' });
-            const merchant = JSON.parse(merchantStr);
+            const merchant = await redis.get(`merchant:${id}`);
+            if (!merchant) return res.status(401).json({ error: '账号或密码错误' });
             if (merchant.password !== password) return res.status(401).json({ error: '账号或密码错误' });
 
             if (!merchant.token_val) {
@@ -58,13 +57,11 @@ export default async function handler(req, res) {
             const token = auth.split(' ')[1];
             let id, password;
             try { const decoded = Buffer.from(token, 'base64').toString(); [id, password] = decoded.split(':'); } catch (e) { return res.status(401).json({ error: '无效token' }); }
-            const merchantStr = await redis.get(`merchant:${id}`);
-            if (!merchantStr) return res.status(401).json({ error: '登录信息失效' });
-            const merchant = JSON.parse(merchantStr);
+            const merchant = await redis.get(`merchant:${id}`);
+            if (!merchant) return res.status(401).json({ error: '登录信息失效' });
             if (merchant.password !== password) return res.status(401).json({ error: '登录信息失效' });
 
-            const settingsStr = await redis.get(`merchant:${id}:settings`);
-            const settings = settingsStr ? JSON.parse(settingsStr) : {};
+            const settings = await redis.get(`merchant:${id}:settings`) || {};
             return res.status(200).json({ id, name: merchant.name, balance: merchant.balance, token_val: merchant.token_val || '', settings });
         }
 
@@ -75,9 +72,8 @@ export default async function handler(req, res) {
             const token = auth.split(' ')[1];
             let id, password;
             try { const decoded = Buffer.from(token, 'base64').toString(); [id, password] = decoded.split(':'); } catch (e) { return res.status(401).json({ error: '无效token' }); }
-            const merchantStr = await redis.get(`merchant:${id}`);
-            if (!merchantStr) return res.status(401).json({ error: '登录信息失效' });
-            const merchant = JSON.parse(merchantStr);
+            const merchant = await redis.get(`merchant:${id}`);
+            if (!merchant) return res.status(401).json({ error: '登录信息失效' });
             if (merchant.password !== password) return res.status(401).json({ error: '登录信息失效' });
 
             const newToken = `${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
@@ -93,16 +89,17 @@ export default async function handler(req, res) {
             const token = auth.split(' ')[1];
             let id, password;
             try { const decoded = Buffer.from(token, 'base64').toString(); [id, password] = decoded.split(':'); } catch (e) { return res.status(401).json({ error: '无效token' }); }
-            const merchantStr = await redis.get(`merchant:${id}`);
-            if (!merchantStr) return res.status(401).json({ error: '登录信息失效' });
-            const merchant = JSON.parse(merchantStr);
+            const merchant = await redis.get(`merchant:${id}`);
+            if (!merchant) return res.status(401).json({ error: '登录信息失效' });
             if (merchant.password !== password) return res.status(401).json({ error: '登录信息失效' });
 
             const keys = await redis.keys(`flow:${id}:*`);
             const flows = [];
             for (const key of keys) {
                 const raw = await redis.get(key);
-                if (raw) { try { flows.push(JSON.parse(raw)); } catch (e) {} }
+                if (raw) {
+                    try { flows.push(typeof raw === 'string' ? JSON.parse(raw) : raw); } catch (e) {}
+                }
             }
             flows.sort((a, b) => new Date(b.time) - new Date(a.time));
             return res.status(200).json({ flows });
@@ -117,9 +114,8 @@ export default async function handler(req, res) {
             try { const decoded = Buffer.from(token, 'base64').toString(); [id, password] = decoded.split(':'); } catch (e) { return res.status(401).json({ error: '无效token' }); }
             const { oldPassword, newPassword } = req.body || {};
             if (!oldPassword || !newPassword) return res.status(400).json({ error: '缺少参数' });
-            const merchantStr = await redis.get(`merchant:${id}`);
-            if (!merchantStr) return res.status(401).json({ error: '当前登录已失效' });
-            const merchant = JSON.parse(merchantStr);
+            const merchant = await redis.get(`merchant:${id}`);
+            if (!merchant) return res.status(401).json({ error: '当前登录已失效' });
             if (merchant.password !== password) return res.status(401).json({ error: '当前登录已失效' });
             if (merchant.password !== oldPassword) return res.status(400).json({ error: '原密码错误' });
 
@@ -135,9 +131,8 @@ export default async function handler(req, res) {
             const token = auth.split(' ')[1];
             let id, password;
             try { const decoded = Buffer.from(token, 'base64').toString(); [id, password] = decoded.split(':'); } catch (e) { return res.status(401).json({ error: '无效token' }); }
-            const merchantStr = await redis.get(`merchant:${id}`);
-            if (!merchantStr) return res.status(401).json({ error: '登录信息失效' });
-            const merchant = JSON.parse(merchantStr);
+            const merchant = await redis.get(`merchant:${id}`);
+            if (!merchant) return res.status(401).json({ error: '登录信息失效' });
             if (merchant.password !== password) return res.status(401).json({ error: '登录信息失效' });
 
             const { industry, keywords, product, extraNote, styles } = req.body || {};
@@ -155,16 +150,13 @@ export default async function handler(req, res) {
         if (action === 'styles') {
             const { merchant } = req.query;
             if (!merchant) return res.status(400).json({ error: '缺少 merchant 参数' });
-            const settingsStr = await redis.get(`merchant:${merchant}:settings`);
-            const settings = settingsStr ? JSON.parse(settingsStr) : {};
-            const styles = settings.styles || [];
-            return res.status(200).json({ styles });
+            const settings = await redis.get(`merchant:${merchant}:settings`) || {};
+            return res.status(200).json({ styles: settings.styles || [] });
         }
 
         // 价目（公开）
         if (action === 'pricing') {
-            const pricingStr = await redis.get('config:pricing');
-            const pricing = pricingStr ? JSON.parse(pricingStr) : {
+            const pricing = await redis.get('config:pricing') || {
                 items: [
                     { amount: 10, price: '¥1' },
                     { amount: 50, price: '¥5' },
