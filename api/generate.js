@@ -1,37 +1,43 @@
+const REDIS_URL = process.env.KV_REST_API_URL;
+const REDIS_TOKEN = process.env.KV_REST_API_TOKEN;
+
 const redis = {
-  baseUrl: process.env.KV_REST_API_URL,
-  token: process.env.KV_REST_API_TOKEN,
-  async get(key) {
-    const res = await fetch(`${this.baseUrl}/get/${key}`, {
-      headers: { Authorization: `Bearer ${this.token}` }
-    });
-    const data = await res.json();
-    let val = data.result !== undefined ? data.result : (data.value || null);
-    if (typeof val === 'string') {
-      try { val = JSON.parse(val); } catch (e) {}
+    async get(key) {
+        const res = await fetch(`${REDIS_URL}/get/${key}`, {
+            headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+        });
+        const data = await res.json();
+        let val = data.result !== undefined ? data.result : (data.value || null);
+        if (typeof val === 'string') {
+            try { val = JSON.parse(val); } catch (e) {}
+        }
+        return val;
+    },
+    async set(key, value) {
+        const strValue = typeof value === 'string' ? value : JSON.stringify(value);
+        const body = JSON.stringify({ value: strValue });
+        await fetch(`${REDIS_URL}/set/${key}`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${REDIS_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body
+        });
+    },
+    async expire(key, seconds) {
+        await fetch(`${REDIS_URL}/expire/${key}/${seconds}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+        });
+    },
+    async keys(pattern) {
+        const res = await fetch(`${REDIS_URL}/keys/${pattern}`, {
+            headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+        });
+        const data = await res.json();
+        return data.result || [];
     }
-    return val;
-  },
-  async set(key, value) {
-    await fetch(`${this.baseUrl}/set/${key}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value })
-    });
-  },
-  async expire(key, seconds) {
-    await fetch(`${this.baseUrl}/expire/${key}/${seconds}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${this.token}` }
-    });
-  },
-  async keys(pattern) {
-    const res = await fetch(`${this.baseUrl}/keys/${pattern}`, {
-      headers: { Authorization: `Bearer ${this.token}` }
-    });
-    const data = await res.json();
-    return data.result || [];
-  }
 };
 
 const defaultStyleGuides = {
@@ -101,16 +107,16 @@ export default async function handler(req, res) {
 
     const userIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '未知';
     merchant.balance -= 2;
-    await redis.set(`merchant:${merchantId}`, JSON.stringify(merchant));
+    await redis.set(`merchant:${merchantId}`, merchant);
 
     const flowKey = `flow:${merchantId}:${Date.now()}`;
-    await redis.set(flowKey, JSON.stringify({
+    await redis.set(flowKey, {
         type: 'consume',
         amount: 2,
         balanceAfter: merchant.balance,
         time: new Date().toISOString(),
         note: `生成好评消耗 - 使用者IP: ${userIP}`
-    }));
+    });
     await redis.expire(flowKey, 60 * 60 * 24 * 30);
 
     const logEntry = {
@@ -121,7 +127,7 @@ export default async function handler(req, res) {
         prompt: prompt || ''
     };
     const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2,8)}`;
-    await redis.set(logKey, JSON.stringify(logEntry));
+    await redis.set(logKey, logEntry);
     await redis.expire(logKey, 60 * 60 * 24 * 30);
 
     return generateContent(style, prompt, facts, res);
