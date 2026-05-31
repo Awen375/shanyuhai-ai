@@ -36,8 +36,9 @@ async function generateContent(platform, useEmoji, style, prompt, facts, res) {
 2. 平台风格：${platformGuide}
 3. 表情使用：${emojiInstruction}
 4. 内容要求：
-   - 必须基于以下商家信息进行创作，将关键词和补充说明自然地融入文案中，不要生硬罗列。
-   - 模拟真实客人的口吻，以第一人称叙述，加入具体的细节和真实的感受（比如“老板帮我查了潮汐表”“门口扫了个电动车就出发了”）。
+   - 必须基于以下商家信息进行创作，将关键词、门店位置和补充说明自然地融入文案中，不要生硬罗列。
+   - 如果提供了门店位置，请像真实客人一样提及“具体位置很好找”“从XX路拐进去就到”等真实体验。
+   - 模拟真实客人的口吻，以第一人称叙述，加入具体的细节和真实的感受。
    - 文案要流畅、真诚，避免明显的广告感。
 
 商家信息：
@@ -97,6 +98,7 @@ export default async function handler(req, res) {
     let facts = '';
     if (settings.industry) facts += `行业：${settings.industry}\n`;
     if (settings.product) facts += `产品/服务名称：${settings.product}\n`;
+    if (settings.location) facts += `门店位置：${settings.location}\n`;
     if (settings.keywords) facts += `关键词：${settings.keywords}\n`;
     if (settings.extraNote) facts += `补充说明：${settings.extraNote}\n`;
 
