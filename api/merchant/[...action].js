@@ -97,9 +97,7 @@ export default async function handler(req, res) {
             const flows = [];
             for (const key of keys) {
                 const raw = await redis.get(key);
-                if (raw) {
-                    try { flows.push(typeof raw === 'string' ? JSON.parse(raw) : raw); } catch (e) {}
-                }
+                if (raw) flows.push(typeof raw === 'string' ? JSON.parse(raw) : raw);
             }
             flows.sort((a, b) => new Date(b.time) - new Date(a.time));
             return res.status(200).json({ flows });
@@ -146,7 +144,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // 风格（公开）
+        // 风格
         if (action === 'styles') {
             const { merchant } = req.query;
             if (!merchant) return res.status(400).json({ error: '缺少 merchant 参数' });
@@ -154,7 +152,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ styles: settings.styles || [] });
         }
 
-        // 价目（公开）
+        // 价目
         if (action === 'pricing') {
             const pricing = await redis.get('config:pricing') || {
                 items: [
