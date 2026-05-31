@@ -226,26 +226,28 @@
             const statSelect = document.getElementById('statMerchantSelect');
             statSelect.innerHTML = '<option value="">-- 选择商家 --</option>';
 
-            data.merchants.forEach(m => {
-                const statusText = m.status === 'banned' ? '🚫已封' : '✅正常';
-                tbody.innerHTML += `<tr>
-                    <td>${m.id}</td>
-                    <td>${m.name || ''}</td>
-                    <td>${m.balance}</td>
-                    <td>${statusText}</td>
-                    <td>
-                        <button onclick="openRecharge('${m.id}')">💳 充/扣</button>
-                        <button onclick="showFlow('${m.id}')">📈流水</button>
-                        <button onclick="showDetail('${m.id}')" class="info">🔍详情</button>
-                        <button onclick="deleteMerchant('${m.id}')" class="danger">🗑删除</button>
-                        ${m.status === 'banned' 
-                            ? `<button onclick="toggleBan('${m.id}', false)" class="success">🔓解封</button>`
-                            : `<button onclick="toggleBan('${m.id}', true)" class="warning">🚫封号</button>`
-                        }
-                    </td>
-                </tr>`;
-                statSelect.innerHTML += `<option value="${m.id}">${m.id} - ${m.name||''}</option>`;
-            });
+            if (data.merchants && Array.isArray(data.merchants)) {
+                data.merchants.forEach(m => {
+                    const statusText = m.status === 'banned' ? '🚫已封' : '✅正常';
+                    tbody.innerHTML += `<tr>
+                        <td>${m.id}</td>
+                        <td>${m.name || ''}</td>
+                        <td>${m.balance}</td>
+                        <td>${statusText}</td>
+                        <td>
+                            <button onclick="openRecharge('${m.id}')">💳 充/扣</button>
+                            <button onclick="showFlow('${m.id}')">📈流水</button>
+                            <button onclick="showDetail('${m.id}')" class="info">🔍详情</button>
+                            <button onclick="deleteMerchant('${m.id}')" class="danger">🗑删除</button>
+                            ${m.status === 'banned' 
+                                ? `<button onclick="toggleBan('${m.id}', false)" class="success">🔓解封</button>`
+                                : `<button onclick="toggleBan('${m.id}', true)" class="warning">🚫封号</button>`
+                            }
+                        </td>
+                    </tr>`;
+                    statSelect.innerHTML += `<option value="${m.id}">${m.id} - ${m.name||''}</option>`;
+                });
+            }
         }
 
         async function addMerchant() {
@@ -357,7 +359,7 @@
             }
         }
 
-        // ✅ 修改后的 loadRecords：使用 /api/admin/logs
+        // ✅ 使用 /api/admin/logs
         async function loadRecords() {
             const tbody = document.querySelector('#recordsTable tbody');
             tbody.innerHTML = '<tr><td colspan="5">加载中...</td></tr>';
@@ -365,7 +367,7 @@
             const data = await res.json();
             if (!res.ok) { tbody.innerHTML = `<tr><td colspan="5">错误: ${data.error}</td></tr>`; return; }
             tbody.innerHTML = '';
-            if (data.records.length === 0) { tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>'; return; }
+            if (!data.records || data.records.length === 0) { tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>'; return; }
             data.records.forEach(r => {
                 const time = new Date(r.time).toLocaleString('zh-CN');
                 tbody.innerHTML += `<tr><td>${time}</td><td>${r.ip || ''}</td><td>${r.merchant || '无'}</td><td>${r.style}</td><td>${r.prompt || ''}</td></tr>`;
@@ -399,6 +401,10 @@
         async function loadPricing() {
             const res = await fetch('/api/admin/pricing', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
+            if (!data || !data.items) {
+                console.error('价目表数据错误:', data);
+                return;
+            }
             const container = document.getElementById('pricingItemsContainer');
             container.innerHTML = '';
             data.items.forEach(item => {
@@ -454,7 +460,7 @@
             });
             const data = await res.json();
             if (res.ok) {
-                document.getElementById('detailPassword').innerText = data.password;
+                document.getElementById('detailPassword').innerText = data.password || '无';
                 const s = data.settings || {};
                 document.getElementById('detailSettings').innerHTML = `
                     <p><b>行业：</b>${s.industry || '未设置'}</p>
