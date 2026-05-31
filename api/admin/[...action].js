@@ -7,8 +7,9 @@ const redis = {
     });
     const data = await res.json();
     let val = data.result !== undefined ? data.result : (data.value || null);
+    // 安全解析：只有当 val 是字符串时才尝试 JSON.parse，解析失败返回原字符串
     if (typeof val === 'string') {
-      try { val = JSON.parse(val); } catch(e) {}
+      try { val = JSON.parse(val); } catch (e) { /* 保持原字符串 */ }
     }
     return val;
   },
@@ -52,9 +53,8 @@ export default async function handler(req, res) {
 
         // 公开：联系方式读取
         if (action === 'contact' && req.method === 'GET') {
-            const dataStr = await redis.get('config:contact');
-            const data = dataStr ? JSON.parse(dataStr) : {};
-            return res.status(200).json(data);
+            const data = await redis.get('config:contact');
+            return res.status(200).json(data || {});
         }
 
         // 日志（/api/admin 或 /api/admin/logs）
@@ -64,7 +64,9 @@ export default async function handler(req, res) {
             const records = [];
             for (const key of keys) {
                 const raw = await redis.get(key);
-                if (raw) { try { records.push(JSON.parse(raw)); } catch (e) {} }
+                if (raw) {
+                    try { records.push(typeof raw === 'string' ? JSON.parse(raw) : raw); } catch (e) {}
+                }
             }
             records.sort((a, b) => new Date(b.time) - new Date(a.time));
             return res.status(200).json({ records: records.slice(0, 50) });
@@ -77,11 +79,9 @@ export default async function handler(req, res) {
             if (req.method === 'GET' && req.query?.action === 'detail') {
                 const { id } = req.query;
                 if (!id) return res.status(400).json({ error: '缺少id' });
-                const merchantStr = await redis.get(`merchant:${id}`);
-                if (!merchantStr) return res.status(404).json({ error: '商家不存在' });
-                const merchant = JSON.parse(merchantStr);
-                const settingsStr = await redis.get(`merchant:${id}:settings`);
-                const settings = settingsStr ? JSON.parse(settingsStr) : {};
+                const merchant = await redis.get(`merchant:${id}`);
+                if (!merchant) return res.status(404).json({ error: '商家不存在' });
+                const settings = await redis.get(`merchant:${id}:settings`) || {};
                 return res.status(200).json({
                     id,
                     name: merchant.name,
@@ -98,7 +98,9 @@ export default async function handler(req, res) {
                 const flows = [];
                 for (const key of keys) {
                     const raw = await redis.get(key);
-                    if (raw) { try { flows.push(JSON.parse(raw)); } catch (e) {} }
+                    if (raw) {
+                        try { flows.push(typeof raw === 'string' ? JSON.parse(raw) : raw); } catch (e) {}
+                    }
                 }
                 flows.sort((a, b) => new Date(b.time) - new Date(a.time));
                 return res.status(200).json({ flows });
@@ -113,7 +115,7 @@ export default async function handler(req, res) {
                     const raw = await redis.get(key);
                     if (!raw) continue;
                     try {
-                        const log = JSON.parse(raw);
+                        const log = typeof raw === 'string' ? JSON.parse(raw) : raw;
                         if (log.merchant === merchant) {
                             const d = new Date(log.time);
                             if (d >= sd && d <= ed) {
@@ -131,9 +133,8 @@ export default async function handler(req, res) {
                 const merchants = [];
                 for (const key of keys) {
                     if (key.includes(':settings')) continue;
-                    const data = await redis.get(key);
-                    if (data) {
-                        const m = JSON.parse(data);
+                    const m = await redis.get(key);
+                    if (m) {
                         merchants.push({
                             id: key.replace('merchant:', ''),
                             name: m.name || '',
@@ -161,9 +162,8 @@ export default async function handler(req, res) {
             if (req.method === 'PUT') {
                 const { id, amount, type, note, password, status } = req.body;
                 if (!id) return res.status(400).json({ error: '缺少id' });
-                const merchantStr = await redis.get(`merchant:${id}`);
-                if (!merchantStr) return res.status(404).json({ error: '商家不存在' });
-                const merchant = JSON.parse(merchantStr);
+                const merchant = await redis.get(`merchant:${id}`);
+                if (!merchant) return res.status(404).json({ error: '商家不存在' });
                 if (password) {
                     merchant.password = password;
                     await redis.set(`merchant:${id}`, JSON.stringify(merchant));
@@ -205,10 +205,8 @@ export default async function handler(req, res) {
         if (action === 'config') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
-                const rateConfigStr = await redis.get('config:rate_limit');
-                const rateConfig = rateConfigStr ? JSON.parse(rateConfigStr) : { defaultLimit: 5, unlimitedIPs: [], customLimits: {} };
-                const bannedStr = await redis.get('config:banned_ips');
-                const banned = bannedStr ? JSON.parse(bannedStr) : [];
+                const rateConfig = await redis.get('config:rate_limit') || { defaultLimit: 5, unlimitedIPs: [], customLimits: {} };
+                const banned = await redis.get('config:banned_ips') || [];
                 return res.status(200).json({ rateConfig, banned });
             }
             if (req.method === 'POST') {
@@ -231,8 +229,7 @@ export default async function handler(req, res) {
         if (action === 'pricing') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
-                const pricingStr = await redis.get('config:pricing');
-                const pricing = pricingStr ? JSON.parse(pricingStr) : {
+                const pricing = await redis.get('config:pricing') || {
                     items: [
                         { amount: 10, price: '¥1' },
                         { amount: 50, price: '¥5' },
@@ -257,9 +254,8 @@ export default async function handler(req, res) {
             if (req.method !== 'POST') return res.status(405).json({ error: '只支持POST' });
             const { id } = req.body;
             if (!id) return res.status(400).json({ error: '缺少id' });
-            const merchantStr = await redis.get(`merchant:${id}`);
-            if (!merchantStr) return res.status(404).json({ error: '商家不存在' });
-            const merchant = JSON.parse(merchantStr);
+            const merchant = await redis.get(`merchant:${id}`);
+            if (!merchant) return res.status(404).json({ error: '商家不存在' });
             const loginToken = Buffer.from(`${id}:${merchant.password}`).toString('base64');
             const url = `/merchant.html?auto_token=${encodeURIComponent(loginToken)}`;
             return res.status(200).json({ url });
