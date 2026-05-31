@@ -21,13 +21,13 @@ export default async function handler(req, res) {
             return true;
         };
 
-        // 联系方式读取
+        // ===== 公开接口：联系方式读取 =====
         if (action === 'contact' && req.method === 'GET') {
             const data = await redis.get('config:contact') || {};
             return res.status(200).json(data);
         }
 
-        // 日志
+        // ===== 日志 =====
         if (action === '' || action === 'logs') {
             if (!checkAdmin()) return;
             const keys = await redis.keys('log:*');
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ records: records.slice(0, 50) });
         }
 
-        // 商家管理
+        // ===== 商家管理 =====
         if (action === 'merchants') {
             if (!checkAdmin()) return;
 
@@ -94,7 +94,7 @@ export default async function handler(req, res) {
                 }
                 return res.status(200).json({ total, daily });
             }
-            // 列表
+            // 列表（★ 新增行业字段）
             if (req.method === 'GET') {
                 const keys = await redis.keys('merchant:*');
                 const merchants = [];
@@ -102,9 +102,11 @@ export default async function handler(req, res) {
                     if (key.includes(':settings')) continue;
                     const m = await redis.get(key);
                     if (m && typeof m === 'object') {
+                        const settings = await redis.get(`${key}:settings`) || {};
                         merchants.push({
                             id: key.replace('merchant:', ''),
                             name: m.name || '未命名商家',
+                            industry: settings.industry || '',   // 行业
                             balance: m.balance || 0,
                             status: m.status || 'active',
                             password: m.password || '',
@@ -129,14 +131,32 @@ export default async function handler(req, res) {
 
                 await redis.set(`merchant:${id}`, newMerchant);
                 const saved = await redis.get(`merchant:${id}`);
-                console.log('写入验证:', JSON.stringify(saved));
-
                 return res.status(200).json({ success: true, saved });
             }
-            // 修改
+            // 修改（支持修改ID、密码、余额、状态）
             if (req.method === 'PUT') {
-                const { id, amount, type, note, password, status } = req.body;
+                const { id, newId, amount, type, note, password, status } = req.body;
                 if (!id) return res.status(400).json({ error: '缺少id' });
+
+                // ★ 修改商家ID
+                if (newId && newId !== id) {
+                    const existingNew = await redis.get(`merchant:${newId}`);
+                    if (existingNew) return res.status(400).json({ error: '新ID已存在' });
+                    const merchant = await redis.get(`merchant:${id}`);
+                    if (!merchant) return res.status(404).json({ error: '商家不存在' });
+
+                    // 复制到新ID
+                    await redis.set(`merchant:${newId}`, merchant);
+                    // 复制设置
+                    const settings = await redis.get(`merchant:${id}:settings`);
+                    if (settings) await redis.set(`merchant:${newId}:settings`, settings);
+                    // 删除旧ID
+                    await redis.del(`merchant:${id}`);
+                    await redis.del(`merchant:${id}:settings`);
+
+                    return res.status(200).json({ success: true });
+                }
+
                 const merchant = await redis.get(`merchant:${id}`);
                 if (!merchant) return res.status(404).json({ error: '商家不存在' });
 
@@ -179,7 +199,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 配置管理
+        // ===== 配置管理 =====
         if (action === 'config') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
@@ -195,7 +215,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 联系方式设置
+        // ===== 联系方式设置 =====
         if (action === 'contact' && req.method === 'POST') {
             if (!checkAdmin()) return;
             const { qrcode_url, phone, wechat, extra } = req.body;
@@ -203,7 +223,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // 价目表管理
+        // ===== 价目表管理 =====
         if (action === 'pricing') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
@@ -226,7 +246,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 直接登录商家后台
+        // ===== 直接登录商家后台 =====
         if (action === 'login-as-merchant') {
             if (!checkAdmin()) return;
             if (req.method !== 'POST') return res.status(405).json({ error: '只支持POST' });
