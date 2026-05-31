@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>山予海 · 商家后台</title>
+    <title>山予海AI·商家中心</title>
     <style>
         body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; flex-direction: column; }
         .card { 
@@ -61,18 +61,18 @@
     <div id="dashboard" class="hidden" style="width:100%; max-width:500px;">
         <div class="card">
             <span class="merchant-id-badge" id="merchantIdDisplay"></span>
-            <h2>🌊 山予海商家中心</h2>
+            <h2><img src="/logo.jpg" alt="logo" style="height: 1em; vertical-align: middle; margin-right: 8px;">商家中心</h2>
             <div class="info">🧮 剩余算力：<strong id="balanceSpan"></strong></div>
             <p class="recharge-tip">💡 充值算力请联系管理员</p>
             <div class="btn-row">
                 <button onclick="showFlow('consume')">📊 算力明细</button>
                 <button onclick="showFlow('recharge')" class="recharge-btn">💰 充值记录</button>
-                <button onclick="showPricing()" class="pricing-btn">💎 算力价目</button>
+                <button onclick="showPricing()" class="pricing-btn">💎 算力价目表</button>
             </div>
-            <p style="margin-top:15px;">专属推广二维码（客人扫码生成好评，每次消耗2算力）</p>
+            <p style="margin-top:15px;">专属二维码（客人扫码生成好评，每次消耗2点算力）</p>
             <img id="qrImage" />
             <p style="text-align:center; color:#888; word-break:break-all;">链接: <span id="qrUrl"></span></p>
-            <button onclick="refreshQR()">🔄 刷新二维码（旧码失效）</button>
+            <button onclick="refreshQR()">刷新二维码（旧码失效）</button>
             <button onclick="logout()" style="background:#ccc;color:#333;">退出登录</button>
         </div>
 
