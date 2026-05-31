@@ -1,10 +1,10 @@
 const REDIS_URL = process.env.KV_REST_API_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN;
 
-// 安全的 redis.set：确保 value 字段始终是字符串，且只做一次 JSON.stringify
-async function redisSet(key, value) {
-    const strValue = typeof value === 'string' ? value : JSON.stringify(value);
-    const body = JSON.stringify({ value: strValue });
+// 绝对安全的 set：只接受对象，内部处理 JSON 字符串
+async function redisSet(key, obj) {
+    const strValue = JSON.stringify(obj); // 对象转字符串
+    const body = JSON.stringify({ value: strValue }); // 构造 { value: "字符串" }
     await fetch(`${REDIS_URL}/set/${key}`, {
         method: 'POST',
         headers: {
@@ -58,13 +58,13 @@ export default async function handler(req, res) {
             return true;
         };
 
-        // ===== 公开接口：联系方式读取 =====
+        // 公开：联系方式读取
         if (action === 'contact' && req.method === 'GET') {
             const data = await redisGet('config:contact') || {};
             return res.status(200).json(data);
         }
 
-        // ===== 日志 =====
+        // 日志
         if (action === '' || action === 'logs') {
             if (!checkAdmin()) return;
             const keys = await redisKeys('log:*');
@@ -77,7 +77,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ records: records.slice(0, 50) });
         }
 
-        // ===== 商家管理 =====
+        // 商家管理
         if (action === 'merchants') {
             if (!checkAdmin()) return;
 
@@ -150,7 +150,7 @@ export default async function handler(req, res) {
                 }
                 return res.status(200).json({ merchants });
             }
-            // 新增商家
+            // 新增商家（★ 核心：直接传递对象）
             if (req.method === 'POST') {
                 const { id, name, password, balance } = req.body;
                 if (!id || !password) return res.status(400).json({ error: 'ID和密码必填' });
@@ -164,7 +164,7 @@ export default async function handler(req, res) {
                     status: 'active',
                 };
 
-                await redisSet(`merchant:${id}`, newMerchant);
+                await redisSet(`merchant:${id}`, newMerchant); // 直接传对象
 
                 const saved = await redisGet(`merchant:${id}`);
                 console.log('写入验证:', JSON.stringify(saved));
@@ -217,7 +217,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // ===== 配置管理 =====
+        // 配置管理
         if (action === 'config') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
@@ -233,7 +233,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // ===== 联系方式设置 =====
+        // 联系方式设置
         if (action === 'contact' && req.method === 'POST') {
             if (!checkAdmin()) return;
             const { qrcode_url, phone, wechat, extra } = req.body;
@@ -241,7 +241,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // ===== 价目表管理 =====
+        // 价目表管理
         if (action === 'pricing') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
@@ -264,7 +264,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // ===== 直接登录商家后台 =====
+        // 直接登录商家后台
         if (action === 'login-as-merchant') {
             if (!checkAdmin()) return;
             if (req.method !== 'POST') return res.status(405).json({ error: '只支持POST' });
