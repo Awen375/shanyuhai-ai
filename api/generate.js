@@ -6,16 +6,26 @@ const redis = new Redis({
 });
 
 const defaultStyleGuides = {
-    "情绪共鸣型": "你是感情细腻的体验者。用第一人称写小红书好评，抒发内心感动、放松与共鸣，带emoji和话题标签。",
-    "宝藏发现型": "你是乐于分享隐藏好物的博主。用惊喜口吻突出产品或服务的独特、性价比，像发现秘密基地。",
-    "氛围描绘型": "你是擅长描写环境的作家。着重刻画环境、氛围、细节，让读者身临其境。",
-    "干货整理型": "你是信息整理达人。用分点或小标题介绍产品特点、服务、价格、位置等实用信息。",
-    "攻略型": "你是攻略专家。结合产品或服务给出详细的使用/体验攻略。"
+    "情绪共鸣型": "你是感情细腻的体验者。",
+    "宝藏发现型": "你是乐于分享隐藏好物的博主。",
+    "氛围描绘型": "你是擅长描写环境的作家。",
+    "干货整理型": "你是信息整理达人。",
+    "攻略型": "你是攻略专家。"
 };
 
-async function generateContent(style, prompt, facts, res) {
-    const system = facts + '\n\n' + (defaultStyleGuides[style] || '请写一篇热情的小红书好评，带emoji和话题标签。');
+const platformGuides = {
+    xiaohongshu: "请生成一篇小红书风格的好评，使用emoji和热门话题标签，语气亲切活泼。",
+    dianping: "请生成一篇大众点评风格的好评，客观描述体验，列出优点和缺点，评分式总结。",
+    douyin: "请生成一段抖音风格的口播文案，节奏明快，带有强烈个人感受和网络热词，适合视频配音。"
+};
+
+async function generateContent(platform, style, prompt, facts, res) {
+    const styleGuide = defaultStyleGuides[style] || '请写一篇热情的好评。';
+    const platformGuide = platformGuides[platform] || platformGuides.xiaohongshu;
+    
+    const system = `${facts}\n\n${styleGuide}\n${platformGuide}\n要求：包含emoji和话题标签，真诚生动。`;
     const user = prompt ? `请按上面要求写好评，并注意补充：${prompt}` : '请直接生成好评文案';
+    
     try {
         const response = await fetch('https://api.deepseek.com/chat/completions', {
             method: 'POST',
@@ -42,7 +52,7 @@ async function generateContent(style, prompt, facts, res) {
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: '只支持POST' });
 
-    const { prompt, style, merchant: merchantId, token: qrToken } = req.body;
+    const { platform = 'xiaohongshu', style, prompt, merchant: merchantId, token: qrToken } = req.body;
     if (!style) return res.status(400).json({ error: '请选择写作风格' });
 
     if (!merchantId) {
@@ -63,12 +73,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '该商家尚未设置行业和产品信息，请联系商家完善' });
     }
 
-    let facts = '你是一位专业的小红书好评写手。请为以下产品/服务写一篇好评：\n';
+    let facts = '你是一位专业的好评写手。请为以下产品/服务写一篇好评：\n';
     if (settings.industry) facts += `行业：${settings.industry}\n`;
     if (settings.product) facts += `产品/服务名称：${settings.product}\n`;
     if (settings.keywords) facts += `关键词：${settings.keywords}\n`;
     if (settings.extraNote) facts += `补充信息：${settings.extraNote}\n`;
-    facts += `\n请根据以上信息，生成一篇真诚、生动的小红书风格好评，包含emoji和话题标签。`;
 
     const userIP = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '未知';
     merchant.balance -= 2;
@@ -89,11 +98,12 @@ export default async function handler(req, res) {
         ip: userIP,
         merchant: merchantId,
         style,
+        platform,
         prompt: prompt || ''
     };
     const logKey = `log:${Date.now()}:${Math.random().toString(36).substring(2,8)}`;
     await redis.set(logKey, logEntry);
     await redis.expire(logKey, 60 * 60 * 24 * 30);
 
-    return generateContent(style, prompt, facts, res);
+    return generateContent(platform, style, prompt, facts, res);
 }
