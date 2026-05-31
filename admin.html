@@ -251,18 +251,29 @@
             }
         }
 
+        // ★ 修改后的 addMerchant（弹窗显示存储结果）
         async function addMerchant() {
             const id = document.getElementById('newMerchantId').value.trim();
             const name = document.getElementById('newMerchantName').value.trim();
             const password = document.getElementById('newMerchantPass').value;
             const balance = parseInt(document.getElementById('newMerchantBalance').value) || 100;
             if (!id || !password) return alert('ID和密码必填');
-            await fetch('/api/admin/merchants', {
+            
+            const res = await fetch('/api/admin/merchants', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id, name, password, balance })
             });
-            await loadMerchants();
+            const data = await res.json();
+            
+            // 弹窗显示返回的存储结果
+            alert('服务器返回的存储数据：\n' + JSON.stringify(data.saved, null, 2));
+            
+            if (data.success) {
+                await loadMerchants();
+            } else {
+                alert('新增失败：' + (data.error || '未知错误'));
+            }
         }
 
         function openRecharge(id) {
