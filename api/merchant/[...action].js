@@ -6,7 +6,7 @@ const redis = {
       headers: { Authorization: `Bearer ${this.token}` }
     });
     const data = await res.json();
-    return data.result;
+    return data.result !== undefined ? data.result : (data.value || null);
   },
   async set(key, value) {
     await fetch(`${this.baseUrl}/set/${key}`, {
