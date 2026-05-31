@@ -32,7 +32,7 @@ const redis = {
 
 export default async function handler(req, res) {
     try {
-        const pathOnly = req.url.split('?')[0];                     // /api/admin 或 /api/admin/merchants 等
+        const pathOnly = req.url.split('?')[0];
         const rawAction = pathOnly.replace('/api/admin/', '').replace('/api/admin', '');
         const action = rawAction || '';
 
@@ -53,16 +53,14 @@ export default async function handler(req, res) {
             return res.status(200).json(data);
         }
 
-        // ★ 修复空路径 /api/admin 和 /api/admin/logs ★
+        // 日志（/api/admin 或 /api/admin/logs）
         if (action === '' || action === 'logs') {
             if (!checkAdmin()) return;
             const keys = await redis.keys('log:*');
             const records = [];
             for (const key of keys) {
                 const raw = await redis.get(key);
-                if (raw) {
-                    try { records.push(JSON.parse(raw)); } catch (e) {}
-                }
+                if (raw) { try { records.push(JSON.parse(raw)); } catch (e) {} }
             }
             records.sort((a, b) => new Date(b.time) - new Date(a.time));
             return res.status(200).json({ records: records.slice(0, 50) });
@@ -80,7 +78,13 @@ export default async function handler(req, res) {
                 const merchant = JSON.parse(merchantStr);
                 const settingsStr = await redis.get(`merchant:${id}:settings`);
                 const settings = settingsStr ? JSON.parse(settingsStr) : {};
-                return res.status(200).json({ id, name: merchant.name, password: merchant.password, balance: merchant.balance, status: merchant.status, settings });
+                return res.status(200).json({
+                    id, name: merchant.name,
+                    password: merchant.password,
+                    balance: merchant.balance,
+                    status: merchant.status,
+                    settings
+                });
             }
             if (req.method === 'GET' && req.query?.action === 'flow') {
                 const { merchant } = req.query;
@@ -125,7 +129,12 @@ export default async function handler(req, res) {
                     const data = await redis.get(key);
                     if (data) {
                         const m = JSON.parse(data);
-                        merchants.push({ id: key.replace('merchant:', ''), name: m.name, balance: m.balance, status: m.status || 'active' });
+                        merchants.push({
+                            id: key.replace('merchant:', ''),
+                            name: m.name || '',
+                            balance: m.balance || 0,
+                            status: m.status || 'active'
+                        });
                     }
                 }
                 return res.status(200).json({ merchants });
@@ -135,7 +144,13 @@ export default async function handler(req, res) {
                 if (!id || !password) return res.status(400).json({ error: '缺少参数' });
                 const existing = await redis.get(`merchant:${id}`);
                 if (existing) return res.status(400).json({ error: '商家ID已存在' });
-                await redis.set(`merchant:${id}`, JSON.stringify({ name: name || '', password, balance: balance || 100, status: 'active' }));
+                const newMerchant = {
+                    name: name || '',
+                    password,
+                    balance: Number(balance) || 100,
+                    status: 'active'
+                };
+                await redis.set(`merchant:${id}`, JSON.stringify(newMerchant));
                 return res.status(200).json({ success: true });
             }
             if (req.method === 'PUT') {
@@ -144,17 +159,33 @@ export default async function handler(req, res) {
                 const merchantStr = await redis.get(`merchant:${id}`);
                 if (!merchantStr) return res.status(404).json({ error: '商家不存在' });
                 const merchant = JSON.parse(merchantStr);
-                if (password) { merchant.password = password; await redis.set(`merchant:${id}`, JSON.stringify(merchant)); return res.status(200).json({ success: true }); }
+                if (password) {
+                    merchant.password = password;
+                    await redis.set(`merchant:${id}`, JSON.stringify(merchant));
+                    return res.status(200).json({ success: true });
+                }
                 if (amount !== undefined && type) {
-                    let newBalance = merchant.balance || 0;
-                    if (type === 'add') newBalance += Number(amount); else if (type === 'subtract') newBalance -= Number(amount); else return res.status(400).json({ error: '无效类型' });
+                    let newBalance = Number(merchant.balance) || 0;
+                    if (type === 'add') newBalance += Number(amount);
+                    else if (type === 'subtract') newBalance -= Number(amount);
+                    else return res.status(400).json({ error: '无效类型' });
                     if (newBalance < 0) return res.status(400).json({ error: '余额不能为负' });
                     merchant.balance = newBalance;
                     await redis.set(`merchant:${id}`, JSON.stringify(merchant));
-                    await redis.set(`flow:${id}:${Date.now()}`, JSON.stringify({ type: type === 'add' ? 'admin_add' : 'admin_subtract', amount: Number(amount), balanceAfter: newBalance, time: new Date().toISOString(), note: note || '' }));
+                    await redis.set(`flow:${id}:${Date.now()}`, JSON.stringify({
+                        type: type === 'add' ? 'admin_add' : 'admin_subtract',
+                        amount: Number(amount),
+                        balanceAfter: newBalance,
+                        time: new Date().toISOString(),
+                        note: note || ''
+                    }));
                     return res.status(200).json({ success: true });
                 }
-                if (status) { merchant.status = status; await redis.set(`merchant:${id}`, JSON.stringify(merchant)); return res.status(200).json({ success: true }); }
+                if (status) {
+                    merchant.status = status;
+                    await redis.set(`merchant:${id}`, JSON.stringify(merchant));
+                    return res.status(200).json({ success: true });
+                }
                 return res.status(400).json({ error: '无效请求' });
             }
             if (req.method === 'DELETE') {
@@ -191,12 +222,20 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // 价目表
+        // ★ 价目表管理 ★
         if (action === 'pricing') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
                 const pricingStr = await redis.get('config:pricing');
-                const pricing = pricingStr ? JSON.parse(pricingStr) : { items: [], note: '' };
+                const pricing = pricingStr ? JSON.parse(pricingStr) : {
+                    items: [
+                        { amount: 10, price: '¥1' },
+                        { amount: 50, price: '¥5' },
+                        { amount: 100, price: '¥9' },
+                        { amount: 200, price: '¥16' }
+                    ],
+                    note: '请联系管理员充值'
+                };
                 return res.status(200).json(pricing);
             }
             if (req.method === 'POST') {
