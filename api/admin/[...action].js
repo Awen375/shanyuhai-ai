@@ -84,10 +84,10 @@ export default async function handler(req, res) {
                 const settings = await redis.get(`merchant:${id}:settings`) || {};
                 return res.status(200).json({
                     id,
-                    name: merchant.name,
-                    password: merchant.password,
-                    balance: merchant.balance,
-                    status: merchant.status,
+                    name: merchant.name || '未命名',
+                    password: merchant.password || '',
+                    balance: merchant.balance || 0,
+                    status: merchant.status || 'active',
                     settings
                 });
             }
@@ -126,7 +126,7 @@ export default async function handler(req, res) {
                 }
                 return res.status(200).json({ total, daily });
             }
-            // 列表（❌ 修复：不再对已经解析的对象使用 JSON.parse）
+            // 列表
             if (req.method === 'GET') {
                 const keys = await redis.keys('merchant:*');
                 const merchants = [];
@@ -136,24 +136,28 @@ export default async function handler(req, res) {
                     if (m && typeof m === 'object') {
                         merchants.push({
                             id: key.replace('merchant:', ''),
-                            name: m.name || '',
+                            name: m.name || '未命名',
                             balance: m.balance || 0,
-                            status: m.status || 'active'
+                            status: m.status || 'active',
+                            // 列表中不返回密码，但保留详情需要
+                            password: m.password || ''
                         });
                     }
                 }
+                // 调试输出：可以在 Vercel 日志中看到返回的数据
+                console.log('商家列表:', JSON.stringify(merchants));
                 return res.status(200).json({ merchants });
             }
-            // 新增
+            // 新增商家
             if (req.method === 'POST') {
                 const { id, name, password, balance } = req.body;
-                if (!id || !password) return res.status(400).json({ error: '缺少参数' });
+                if (!id || !password) return res.status(400).json({ error: 'ID和密码必填' });
                 const existing = await redis.get(`merchant:${id}`);
                 if (existing) return res.status(400).json({ error: '商家ID已存在' });
                 const newMerchant = {
-                    name: name || '',
+                    name: name || '未命名商家',   // 默认名称
                     password,
-                    balance: Number(balance) || 100,
+                    balance: Number(balance) >= 0 ? Number(balance) : 100,
                     status: 'active'
                 };
                 await redis.set(`merchant:${id}`, JSON.stringify(newMerchant));
@@ -219,7 +223,7 @@ export default async function handler(req, res) {
             }
         }
 
-        // 联系方式
+        // 联系方式设置
         if (action === 'contact' && req.method === 'POST') {
             if (!checkAdmin()) return;
             const { qrcode_url, phone, wechat, extra } = req.body;
@@ -227,7 +231,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ success: true });
         }
 
-        // 价目表
+        // 价目表管理
         if (action === 'pricing') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
