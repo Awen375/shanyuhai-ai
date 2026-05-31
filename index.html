@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>山予海AI · 文案助手</title>
+    <link rel="icon" type="image/png" href="/tubiao.png">
+    <title>山予海AI文案助手</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -82,6 +84,22 @@
         }
         .result-box.show { display: block; animation: fadeInUp 0.5s ease; }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .copy-btn {
+            display: none;
+            width: auto;
+            margin-top: 10px;
+            padding: 10px 24px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .copy-btn:hover { background: #219a52; }
+        .copy-btn.show { display: inline-block; }
         .footer { text-align: center; margin-top: 25px; font-size: 12px; color: #6b8e9e; font-weight: 300; letter-spacing: 0.5px; }
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -104,7 +122,7 @@
 
     <div id="noMerchant" class="scan-reminder">
 <img src="/logo.jpg" alt="logo" class="logo-icon" style="width: 80px; height: auto;" />
-        <h2 id="scanTitle">山予海AI文案助手</h2>
+        <h2 id="scanTitle">AI文案助手</h2>
         <p>请扫描商家提供的专属二维码使用</p>
         <p style="color: #888; font-size: 14px;">如有疑问，请联系山予海AI技术团队</p>
         <div class="scan-buttons">
@@ -121,7 +139,7 @@
             </div>
             <div class="header">
 <img src="/logo.jpg" alt="logo" class="logo-icon" style="width: 80px; height: auto;" />
-                <h1 id="mainTitle">山予海AI文案助手</h1>
+                <h1 id="mainTitle">AI文案助手</h1>
                 <div class="subtitle"><span>✨ AI好评助手</span><span>山予海AI大模型</span></div>
             </div>
             <div class="form-group">
@@ -132,7 +150,6 @@
                     <option value="douyin">🎵 抖音</option>
                 </select>
             </div>
-            <!-- 新增表情勾选框 -->
             <div class="emoji-check">
                 <input type="checkbox" id="useEmojiCheck" checked>
                 <label for="useEmojiCheck">在文案中添加表情符号 (emoji)</label>
@@ -147,6 +164,7 @@
             </div>
             <button id="generateBtn" onclick="generate()">生成好评</button>
             <div id="result" class="result-box"></div>
+            <button id="copyBtn" class="copy-btn" onclick="copyResult()">📋 复制文案</button>
             <div class="footer">本程序由，山予海AI大模型团队提供技术支持。</div>
         </div>
     </div>
@@ -276,10 +294,12 @@
             const style = document.getElementById('styleSelect').value;
             const prompt = document.getElementById('prompt').value.trim();
             const resultBox = document.getElementById('result');
+            const copyBtn = document.getElementById('copyBtn');
             btn.disabled = true;
             btn.innerText = '⏳ 正在生成中...';
             resultBox.classList.add('show');
             resultBox.innerText = '⏳ 山予海正在为您书写...';
+            copyBtn.classList.remove('show');
             try {
                 const res = await fetch('/api/generate', {
                     method: 'POST',
@@ -296,6 +316,7 @@
                 const data = await res.json();
                 if (data.result) {
                     resultBox.innerText = data.result;
+                    copyBtn.classList.add('show');
                 } else {
                     throw new Error(data.error || '生成失败');
                 }
@@ -303,8 +324,19 @@
                 resultBox.innerText = '❌ ' + err.message;
             } finally {
                 btn.disabled = false;
-                btn.innerText = '生成好评';
+                btn.innerText = '生成文案';
             }
+        }
+
+        function copyResult() {
+            const text = document.getElementById('result').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const copyBtn = document.getElementById('copyBtn');
+                copyBtn.innerText = '✅ 已复制';
+                setTimeout(() => { copyBtn.innerText = '📋 复制文案'; }, 2000);
+            }).catch(err => {
+                alert('复制失败，请手动复制');
+            });
         }
     </script>
 </body>
