@@ -31,6 +31,8 @@
         .modal-content {
             background: white; border-radius: 20px; padding: 25px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
         }
+        .collapse-icon { float: right; transition: transform 0.3s; }
+        .collapsed .collapse-icon { transform: rotate(-90deg); }
     </style>
 </head>
 <body>
@@ -58,7 +60,7 @@
                 <button onclick="addMerchant()">新增商家</button>
             </div>
             <table id="merchantTable">
-                <thead><tr><th>ID</th><th>名称</th><th>算力</th><th>状态</th><th>操作</th></tr></thead>
+                <thead><tr><th>ID</th><th>名称</th><th>行业</th><th>算力</th><th>状态</th><th>操作</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -67,75 +69,61 @@
         <div class="card">
             <h2 onclick="toggleContact()">📞 联系方式设置（点击展开/折叠）</h2>
             <div id="contactPanel" style="display:none;">
-                <div class="flex-row">
-                    <span class="label">微信二维码URL：</span>
-                    <input type="text" id="contactQrcode" name="contactQrcode" placeholder="https://example.com/qr.jpg" style="width:300px;">
-                </div>
-                <div class="flex-row">
-                    <span class="label">管理员电话：</span>
-                    <input type="text" id="contactPhone" name="contactPhone" placeholder="13800138000" style="width:200px;">
-                </div>
-                <div class="flex-row">
-                    <span class="label">管理员微信：</span>
-                    <input type="text" id="contactWechat" name="contactWechat" placeholder="shanyuhai_kefu" style="width:200px;">
-                </div>
-                <div class="flex-row">
-                    <span class="label">其他说明：</span>
-                    <input type="text" id="contactExtra" name="contactExtra" placeholder="工作时间 9:00-21:00" style="width:300px;">
-                </div>
+                <div class="flex-row"><span class="label">微信二维码URL：</span><input type="text" id="contactQrcode" name="contactQrcode" placeholder="https://example.com/qr.jpg" style="width:300px;"></div>
+                <div class="flex-row"><span class="label">管理员电话：</span><input type="text" id="contactPhone" name="contactPhone" placeholder="13800138000" style="width:200px;"></div>
+                <div class="flex-row"><span class="label">管理员微信：</span><input type="text" id="contactWechat" name="contactWechat" placeholder="shanyuhai_kefu" style="width:200px;"></div>
+                <div class="flex-row"><span class="label">其他说明：</span><input type="text" id="contactExtra" name="contactExtra" placeholder="工作时间 9:00-21:00" style="width:300px;"></div>
                 <button onclick="saveContact()">💾 保存联系方式</button>
             </div>
         </div>
 
-        <!-- 价目表设置 -->
+        <!-- 价目表设置（可折叠） -->
         <div class="card">
             <h2 onclick="togglePricing()">💎 算力价目表设置（点击展开/折叠）</h2>
             <div id="pricingPanel" style="display:none;">
                 <div id="pricingItemsContainer"></div>
                 <button onclick="addPricingRow()">+ 添加一行</button>
-                <div class="flex-row" style="margin-top:10px;">
-                    <span class="label">备注说明：</span>
-                    <input type="text" id="pricingNoteInput" name="pricingNote" placeholder="例如：请联系管理员充值" style="width:300px;">
-                </div>
+                <div class="flex-row" style="margin-top:10px;"><span class="label">备注说明：</span><input type="text" id="pricingNoteInput" name="pricingNote" placeholder="例如：请联系管理员充值" style="width:300px;"></div>
                 <button onclick="savePricing()">💾 保存价目表</button>
             </div>
         </div>
 
-        <!-- 商家使用统计查询 -->
-        <div class="card">
-            <h2>📊 商家使用统计</h2>
-            <div class="flex-row">
-                <span class="label">选择商家：</span>
-                <select id="statMerchantSelect">
-                    <option value="">-- 请先选择商家 --</option>
-                </select>
-                <span class="label">开始日期：</span>
-                <input type="date" id="statStart">
-                <span class="label">结束日期：</span>
-                <input type="date" id="statEnd">
-                <button onclick="queryStats()">查询</button>
+        <!-- 商家使用统计查询（可折叠，默认折叠） -->
+        <div class="card" id="statsCard">
+            <h2 onclick="toggleStats()">📊 商家使用统计 <span class="collapse-icon">▼</span></h2>
+            <div id="statsPanel" style="display:none;">
+                <div class="flex-row">
+                    <span class="label">选择商家：</span><select id="statMerchantSelect"><option value="">-- 请先选择商家 --</option></select>
+                    <span class="label">开始日期：</span><input type="date" id="statStart">
+                    <span class="label">结束日期：</span><input type="date" id="statEnd">
+                    <button onclick="queryStats()">查询</button>
+                </div>
+                <div id="statResult" class="stat-box">请选择商家和日期范围后查询</div>
             </div>
-            <div id="statResult" class="stat-box">请选择商家和日期范围后查询</div>
         </div>
 
-        <!-- 使用记录总览 -->
-        <div class="card">
-            <h2>📋 最近使用记录 <button onclick="loadRecords()" style="float:right;">🔄 刷新</button></h2>
-            <table id="recordsTable">
-                <thead><tr><th>时间</th><th>IP</th><th>商家</th><th>风格</th><th>补充</th></tr></thead>
-                <tbody></tbody>
-            </table>
+        <!-- 使用记录总览（可折叠，默认折叠） -->
+        <div class="card" id="recordsCard">
+            <h2 onclick="toggleRecords()">📋 最近使用记录 <span class="collapse-icon">▼</span></h2>
+            <div id="recordsPanel" style="display:none;">
+                <button onclick="loadRecords()" style="float:right;margin-bottom:10px;">🔄 刷新</button>
+                <table id="recordsTable">
+                    <thead><tr><th>时间</th><th>IP</th><th>商家</th><th>风格</th><th>补充</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <!-- 商家详情弹窗 -->
+    <!-- 商家详情弹窗（增加修改ID功能） -->
     <div id="merchantDetailModal" class="modal-overlay">
         <div class="modal-content">
             <h3>商家详情 - <span id="detailMerchantId"></span></h3>
             <div id="detailSettings"></div>
+            <div style="margin-top:15px;"><strong>密码：</strong> <span id="detailPassword"></span> <button onclick="copyPassword()">📋 复制</button></div>
             <div style="margin-top:15px;">
-                <strong>密码：</strong> <span id="detailPassword"></span>
-                <button onclick="copyPassword()">📋 复制</button>
+                <input type="text" id="newMerchantIdInput" placeholder="新商家ID" style="width:200px;">
+                <button onclick="changeMerchantId()">🆔 修改ID</button>
             </div>
             <div style="margin-top:15px;">
                 <input type="password" id="newMerchantPassword" placeholder="新密码（留空不修改）" style="width:200px;">
@@ -150,10 +138,7 @@
     <div id="flowModal" class="modal-overlay">
         <div class="modal-content" style="max-width:600px;">
             <h3>🧮 算力流水 <span id="flowMerchantName"></span></h3>
-            <table>
-                <thead><tr><th>时间</th><th>类型</th><th>变动</th><th>变动后算力</th><th>备注</th></tr></thead>
-                <tbody id="flowTableBody"></tbody>
-            </table>
+            <table><thead><tr><th>时间</th><th>类型</th><th>变动</th><th>变动后算力</th><th>备注</th></tr></thead><tbody id="flowTableBody"></tbody></table>
             <button onclick="document.getElementById('flowModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
         </div>
     </div>
@@ -164,10 +149,7 @@
             <h3>💳 调整算力</h3>
             <input type="hidden" id="rechargeMerchantId">
             <label for="rechargeType">类型：</label>
-            <select id="rechargeType">
-                <option value="add">➕ 充值算力</option>
-                <option value="subtract">➖ 扣除算力</option>
-            </select>
+            <select id="rechargeType"><option value="add">➕ 充值算力</option><option value="subtract">➖ 扣除算力</option></select>
             <label for="rechargeAmount">金额（算力）：</label>
             <input type="number" id="rechargeAmount" min="1" value="10">
             <label for="rechargeNote">备注：</label>
@@ -182,6 +164,7 @@
     <script>
         const ADMIN_PASSWORD = 'zjm1314520';
         const token = () => localStorage.getItem('admin_token');
+        let currentDetailId = null;
 
         function login() {
             if (document.getElementById('password').value === ADMIN_PASSWORD) {
@@ -208,20 +191,24 @@
             await loadPricing();
         }
 
-        function toggleContact() {
-            const panel = document.getElementById('contactPanel');
+        function toggleContact() { document.getElementById('contactPanel').style.display = document.getElementById('contactPanel').style.display === 'none' ? '' : 'none'; }
+        function togglePricing() { document.getElementById('pricingPanel').style.display = document.getElementById('pricingPanel').style.display === 'none' ? '' : 'none'; }
+
+        function toggleStats() {
+            const panel = document.getElementById('statsPanel');
             panel.style.display = panel.style.display === 'none' ? '' : 'none';
+            document.getElementById('statsCard').classList.toggle('collapsed');
         }
-        function togglePricing() {
-            const panel = document.getElementById('pricingPanel');
+        function toggleRecords() {
+            const panel = document.getElementById('recordsPanel');
             panel.style.display = panel.style.display === 'none' ? '' : 'none';
+            document.getElementById('recordsCard').classList.toggle('collapsed');
         }
 
-        // ---------- 商家列表（带调试输出和默认名称）----------
+        // ---------- 商家列表（含行业列）----------
         async function loadMerchants() {
             const res = await fetch('/api/admin/merchants', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
-            console.log('商家数据:', data);  // 调试输出
             const tbody = document.querySelector('#merchantTable tbody');
             tbody.innerHTML = '';
             const statSelect = document.getElementById('statMerchantSelect');
@@ -233,6 +220,7 @@
                     tbody.innerHTML += `<tr>
                         <td>${m.id}</td>
                         <td>${m.name || '未命名'}</td>
+                        <td>${m.industry || '未设置'}</td>
                         <td>${m.balance}</td>
                         <td>${statusText}</td>
                         <td>
@@ -251,29 +239,17 @@
             }
         }
 
-        // ★ 修改后的 addMerchant（弹窗显示存储结果）
         async function addMerchant() {
             const id = document.getElementById('newMerchantId').value.trim();
             const name = document.getElementById('newMerchantName').value.trim();
             const password = document.getElementById('newMerchantPass').value;
             const balance = parseInt(document.getElementById('newMerchantBalance').value) || 100;
             if (!id || !password) return alert('ID和密码必填');
-            
-            const res = await fetch('/api/admin/merchants', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+            await fetch('/api/admin/merchants', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id, name, password, balance })
             });
-            const data = await res.json();
-            
-            // 弹窗显示返回的存储结果
-            alert('服务器返回的存储数据：\n' + JSON.stringify(data.saved, null, 2));
-            
-            if (data.success) {
-                await loadMerchants();
-            } else {
-                alert('新增失败：' + (data.error || '未知错误'));
-            }
+            await loadMerchants();
         }
 
         function openRecharge(id) {
@@ -290,8 +266,7 @@
             const note = document.getElementById('rechargeNote').value.trim();
             if (!amount || amount <= 0) return alert('请输入有效金额');
             const res = await fetch('/api/admin/merchants', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id, amount, type, note })
             });
             const data = await res.json();
@@ -307,8 +282,7 @@
         async function deleteMerchant(id) {
             if (!confirm('确定删除商家 ' + id + '？此操作不可恢复。')) return;
             await fetch('/api/admin/merchants', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id })
             });
             await loadMerchants();
@@ -317,8 +291,7 @@
         async function toggleBan(id, ban) {
             if (!confirm(`确定${ban ? '封号' : '解封'}商家 ${id} 吗？`)) return;
             await fetch('/api/admin/merchants', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id, status: ban ? 'banned' : 'active' })
             });
             await loadMerchants();
@@ -371,7 +344,6 @@
             }
         }
 
-        // ✅ 使用 /api/admin/logs
         async function loadRecords() {
             const tbody = document.querySelector('#recordsTable tbody');
             tbody.innerHTML = '<tr><td colspan="5">加载中...</td></tr>';
@@ -395,15 +367,13 @@
             document.getElementById('contactWechat').value = data.wechat || '';
             document.getElementById('contactExtra').value = data.extra || '';
         }
-
         async function saveContact() {
             const qrcode_url = document.getElementById('contactQrcode').value.trim();
             const phone = document.getElementById('contactPhone').value.trim();
             const wechat = document.getElementById('contactWechat').value.trim();
             const extra = document.getElementById('contactExtra').value.trim();
             await fetch('/api/admin/contact', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ qrcode_url, phone, wechat, extra })
             });
             alert('联系方式已保存');
@@ -418,7 +388,6 @@
                 try { pricing = JSON.parse(data.value); } catch(e) {}
             }
             if (!pricing || !Array.isArray(pricing.items)) {
-                console.error('价目表数据错误:', pricing);
                 pricing = { items: [], note: '' };
             }
             const container = document.getElementById('pricingItemsContainer');
@@ -426,28 +395,22 @@
             pricing.items.forEach(item => {
                 const row = document.createElement('div');
                 row.className = 'flex-row';
-                row.innerHTML = `
-                    <span>算力：<input type="number" name="amount" value="${item.amount}" class="pricing-amount" style="width:80px;"></span>
-                    <span>价格：<input type="text" name="price" value="${item.price}" class="pricing-price" style="width:80px;"></span>
-                    <button onclick="this.parentElement.remove()" class="danger">删除</button>
-                `;
+                row.innerHTML = `<span>算力：<input type="number" name="amount" value="${item.amount}" class="pricing-amount" style="width:80px;"></span>
+                                <span>价格：<input type="text" name="price" value="${item.price}" class="pricing-price" style="width:80px;"></span>
+                                <button onclick="this.parentElement.remove()" class="danger">删除</button>`;
                 container.appendChild(row);
             });
             document.getElementById('pricingNoteInput').value = pricing.note || '';
         }
-
         function addPricingRow() {
             const container = document.getElementById('pricingItemsContainer');
             const row = document.createElement('div');
             row.className = 'flex-row';
-            row.innerHTML = `
-                <span>算力：<input type="number" name="amount" value="10" class="pricing-amount" style="width:80px;"></span>
-                <span>价格：<input type="text" name="price" value="¥1" class="pricing-price" style="width:80px;"></span>
-                <button onclick="this.parentElement.remove()" class="danger">删除</button>
-            `;
+            row.innerHTML = `<span>算力：<input type="number" name="amount" value="10" class="pricing-amount" style="width:80px;"></span>
+                            <span>价格：<input type="text" name="price" value="¥1" class="pricing-price" style="width:80px;"></span>
+                            <button onclick="this.parentElement.remove()" class="danger">删除</button>`;
             container.appendChild(row);
         }
-
         async function savePricing() {
             const amounts = document.querySelectorAll('.pricing-amount');
             const prices = document.querySelectorAll('.pricing-price');
@@ -459,15 +422,13 @@
             });
             const note = document.getElementById('pricingNoteInput').value.trim();
             await fetch('/api/admin/pricing', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ items, note })
             });
             alert('价目表已保存');
         }
 
         // ---------- 商家详情 ----------
-        let currentDetailId = null;
         async function showDetail(id) {
             currentDetailId = id;
             document.getElementById('detailMerchantId').innerText = id;
@@ -485,6 +446,7 @@
                     <p><b>补充说明：</b>${s.extraNote || '未设置'}</p>
                     <p><b>快捷风格：</b>${(s.styles || []).join(', ') || '默认'}</p>
                 `;
+                document.getElementById('newMerchantIdInput').value = '';
                 document.getElementById('newMerchantPassword').value = '';
             } else {
                 alert('获取详情失败');
@@ -492,12 +454,29 @@
             document.getElementById('merchantDetailModal').style.display = 'flex';
         }
 
+        async function changeMerchantId() {
+            const newId = document.getElementById('newMerchantIdInput').value.trim();
+            if (!newId) return alert('请输入新ID');
+            if (newId === currentDetailId) return alert('新ID与当前ID相同');
+            const res = await fetch('/api/admin/merchants', {
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                body: JSON.stringify({ id: currentDetailId, newId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('ID修改成功');
+                document.getElementById('merchantDetailModal').style.display = 'none';
+                await loadMerchants();
+            } else {
+                alert('修改失败：' + (data.error || '未知错误'));
+            }
+        }
+
         async function changeMerchantPassword() {
             const newPass = document.getElementById('newMerchantPassword').value.trim();
             if (!newPass) return alert('请输入新密码');
             await fetch('/api/admin/merchants', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id: currentDetailId, password: newPass })
             });
             alert('密码已修改');
@@ -511,8 +490,7 @@
 
         async function loginAsMerchant() {
             const res = await fetch('/api/admin/login-as-merchant', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id: currentDetailId })
             });
             const data = await res.json();
