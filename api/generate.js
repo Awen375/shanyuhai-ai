@@ -8,7 +8,7 @@ const redis = {
     const data = await res.json();
     let val = data.result !== undefined ? data.result : (data.value || null);
     if (typeof val === 'string') {
-      try { val = JSON.parse(val); } catch(e) {}
+      try { val = JSON.parse(val); } catch (e) {}
     }
     return val;
   },
@@ -78,8 +78,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '请通过商家二维码访问' });
     }
 
-    const merchantStr = await redis.get(`merchant:${merchantId}`);
-    const merchant = merchantStr ? JSON.parse(merchantStr) : null;
+    const merchant = await redis.get(`merchant:${merchantId}`);
     if (!merchant) return res.status(400).json({ error: '无效商家' });
     if (merchant.status === 'banned') return res.status(403).json({ error: '该商家已被封禁' });
     if (merchant.token_val && merchant.token_val !== qrToken) {
@@ -87,8 +86,7 @@ export default async function handler(req, res) {
     }
     if (merchant.balance < 2) return res.status(402).json({ error: '商家算力不足' });
 
-    const settingsStr = await redis.get(`merchant:${merchantId}:settings`);
-    const settings = settingsStr ? JSON.parse(settingsStr) : {};
+    const settings = await redis.get(`merchant:${merchantId}:settings`) || {};
 
     if (!settings.industry && !settings.product) {
         return res.status(400).json({ error: '该商家尚未设置行业和产品信息，请联系商家完善' });
