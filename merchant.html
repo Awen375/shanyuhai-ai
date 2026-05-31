@@ -71,7 +71,17 @@
                 <button onclick="showPricing()" class="pricing-btn">💎 算力价目表</button>
             </div>
             <p style="margin-top:15px;">专属二维码（客人扫码生成好评，每次消耗2点算力）</p>
-            <img id="qrImage" />
+<div style="position: relative; display: inline-block; margin: 20px auto;">
+    <img id="qrImage" style="display: block;" />
+    <img src="/logo.jpg" style="
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px; height: 40px;
+        border-radius: 8px;
+        box-shadow: 0 0 0 4px white;
+    " />
+</div>
             <p style="text-align:center; color:#888; word-break:break-all;">链接: <span id="qrUrl"></span></p>
             <button onclick="refreshQR()">刷新二维码（旧码失效）</button>
             <button onclick="logout()" style="background:#ccc;color:#333;">退出登录</button>
