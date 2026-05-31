@@ -1,21 +1,8 @@
 const REDIS_URL = process.env.KV_REST_API_URL;
 const REDIS_TOKEN = process.env.KV_REST_API_TOKEN;
 
-// 直接发请求，不做额外的 JSON.stringify 嵌套
-async function redisGet(key) {
-    const res = await fetch(`${REDIS_URL}/get/${key}`, {
-        headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
-    });
-    const data = await res.json();
-    let val = data.result !== undefined ? data.result : (data.value || null);
-    if (typeof val === 'string') {
-        try { val = JSON.parse(val); } catch (e) {}
-    }
-    return val;
-}
-
+// 安全的 redis.set：确保 value 字段始终是字符串，且只做一次 JSON.stringify
 async function redisSet(key, value) {
-    // 将 value 转为字符串，然后直接放在 body 的 value 字段里
     const strValue = typeof value === 'string' ? value : JSON.stringify(value);
     const body = JSON.stringify({ value: strValue });
     await fetch(`${REDIS_URL}/set/${key}`, {
@@ -26,6 +13,18 @@ async function redisSet(key, value) {
         },
         body
     });
+}
+
+async function redisGet(key) {
+    const res = await fetch(`${REDIS_URL}/get/${key}`, {
+        headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+    });
+    const data = await res.json();
+    let val = data.result !== undefined ? data.result : (data.value || null);
+    if (typeof val === 'string') {
+        try { val = JSON.parse(val); } catch (e) {}
+    }
+    return val;
 }
 
 async function redisDel(key) {
@@ -59,13 +58,13 @@ export default async function handler(req, res) {
             return true;
         };
 
-        // 联系方式读取
+        // ===== 公开接口：联系方式读取 =====
         if (action === 'contact' && req.method === 'GET') {
             const data = await redisGet('config:contact') || {};
             return res.status(200).json(data);
         }
 
-        // 日志
+        // ===== 日志 =====
         if (action === '' || action === 'logs') {
             if (!checkAdmin()) return;
             const keys = await redisKeys('log:*');
@@ -78,7 +77,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ records: records.slice(0, 50) });
         }
 
-        // 商家管理
+        // ===== 商家管理 =====
         if (action === 'merchants') {
             if (!checkAdmin()) return;
 
@@ -98,7 +97,40 @@ export default async function handler(req, res) {
                     settings
                 });
             }
-            // 流水、统计等保留（此处省略，与之前相同）
+            // 流水
+            if (req.method === 'GET' && req.query?.action === 'flow') {
+                const { merchant } = req.query;
+                if (!merchant) return res.status(400).json({ error: '缺少merchant' });
+                const keys = await redisKeys(`flow:${merchant}:*`);
+                const flows = [];
+                for (const key of keys) {
+                    const raw = await redisGet(key);
+                    if (raw) flows.push(raw);
+                }
+                flows.sort((a, b) => new Date(b.time) - new Date(a.time));
+                return res.status(200).json({ flows });
+            }
+            // 统计
+            if (req.method === 'GET' && req.query?.action === 'stats') {
+                const { merchant, start, end } = req.query;
+                if (!merchant || !start || !end) return res.status(400).json({ error: '参数不全' });
+                const keys = await redisKeys('log:*');
+                const daily = {}; let total = 0;
+                const sd = new Date(start), ed = new Date(end); ed.setHours(23, 59, 59, 999);
+                for (const key of keys) {
+                    const raw = await redisGet(key);
+                    if (!raw) continue;
+                    if (raw.merchant === merchant) {
+                        const d = new Date(raw.time);
+                        if (d >= sd && d <= ed) {
+                            total++;
+                            const ds = d.toISOString().slice(0, 10);
+                            daily[ds] = (daily[ds] || 0) + 1;
+                        }
+                    }
+                }
+                return res.status(200).json({ total, daily });
+            }
             // 列表
             if (req.method === 'GET') {
                 const keys = await redisKeys('merchant:*');
@@ -118,7 +150,7 @@ export default async function handler(req, res) {
                 }
                 return res.status(200).json({ merchants });
             }
-            // 新增商家（核心修复）
+            // 新增商家
             if (req.method === 'POST') {
                 const { id, name, password, balance } = req.body;
                 if (!id || !password) return res.status(400).json({ error: 'ID和密码必填' });
@@ -132,19 +164,118 @@ export default async function handler(req, res) {
                     status: 'active',
                 };
 
-                // 直接存储（redisSet 会自动转为 JSON 字符串，并正确放入 body）
                 await redisSet(`merchant:${id}`, newMerchant);
 
-                // 立即读取验证
                 const saved = await redisGet(`merchant:${id}`);
                 console.log('写入验证:', JSON.stringify(saved));
 
                 return res.status(200).json({ success: true, saved });
             }
-            // 修改、删除等保持原样（省略，但需完整）
+            // 修改
+            if (req.method === 'PUT') {
+                const { id, amount, type, note, password, status } = req.body;
+                if (!id) return res.status(400).json({ error: '缺少id' });
+                const merchant = await redisGet(`merchant:${id}`);
+                if (!merchant) return res.status(404).json({ error: '商家不存在' });
+
+                if (password) {
+                    merchant.password = password;
+                    await redisSet(`merchant:${id}`, merchant);
+                    return res.status(200).json({ success: true });
+                }
+                if (amount !== undefined && type) {
+                    let newBalance = Number(merchant.balance) || 0;
+                    if (type === 'add') newBalance += Number(amount);
+                    else if (type === 'subtract') newBalance -= Number(amount);
+                    else return res.status(400).json({ error: '无效类型' });
+                    if (newBalance < 0) return res.status(400).json({ error: '余额不能为负' });
+                    merchant.balance = newBalance;
+                    await redisSet(`merchant:${id}`, merchant);
+
+                    await redisSet(`flow:${id}:${Date.now()}`, {
+                        type: type === 'add' ? 'admin_add' : 'admin_subtract',
+                        amount: Number(amount),
+                        balanceAfter: newBalance,
+                        time: new Date().toISOString(),
+                        note: note || '',
+                    });
+                    return res.status(200).json({ success: true });
+                }
+                if (status) {
+                    merchant.status = status;
+                    await redisSet(`merchant:${id}`, merchant);
+                    return res.status(200).json({ success: true });
+                }
+                return res.status(400).json({ error: '无效请求' });
+            }
+            // 删除
+            if (req.method === 'DELETE') {
+                const { id } = req.body;
+                if (!id) return res.status(400).json({ error: '缺少id' });
+                await redisDel(`merchant:${id}`);
+                return res.status(200).json({ success: true });
+            }
         }
 
-        // 配置管理、联系方式、价目表等保持原样（省略，但需完整）
+        // ===== 配置管理 =====
+        if (action === 'config') {
+            if (!checkAdmin()) return;
+            if (req.method === 'GET') {
+                const rateConfig = await redisGet('config:rate_limit') || { defaultLimit: 5, unlimitedIPs: [], customLimits: {} };
+                const banned = await redisGet('config:banned_ips') || [];
+                return res.status(200).json({ rateConfig, banned });
+            }
+            if (req.method === 'POST') {
+                const { rateConfig, banned } = req.body;
+                if (rateConfig) await redisSet('config:rate_limit', rateConfig);
+                if (Array.isArray(banned)) await redisSet('config:banned_ips', banned);
+                return res.status(200).json({ success: true });
+            }
+        }
+
+        // ===== 联系方式设置 =====
+        if (action === 'contact' && req.method === 'POST') {
+            if (!checkAdmin()) return;
+            const { qrcode_url, phone, wechat, extra } = req.body;
+            await redisSet('config:contact', { qrcode_url, phone, wechat, extra });
+            return res.status(200).json({ success: true });
+        }
+
+        // ===== 价目表管理 =====
+        if (action === 'pricing') {
+            if (!checkAdmin()) return;
+            if (req.method === 'GET') {
+                const pricing = await redisGet('config:pricing') || {
+                    items: [
+                        { amount: 10, price: '¥1' },
+                        { amount: 50, price: '¥5' },
+                        { amount: 100, price: '¥9' },
+                        { amount: 200, price: '¥16' }
+                    ],
+                    note: '请联系管理员充值'
+                };
+                return res.status(200).json(pricing);
+            }
+            if (req.method === 'POST') {
+                const { items, note } = req.body;
+                if (!Array.isArray(items)) return res.status(400).json({ error: 'items 必须是数组' });
+                await redisSet('config:pricing', { items, note: note || '' });
+                return res.status(200).json({ success: true });
+            }
+        }
+
+        // ===== 直接登录商家后台 =====
+        if (action === 'login-as-merchant') {
+            if (!checkAdmin()) return;
+            if (req.method !== 'POST') return res.status(405).json({ error: '只支持POST' });
+            const { id } = req.body;
+            if (!id) return res.status(400).json({ error: '缺少id' });
+            const merchant = await redisGet(`merchant:${id}`);
+            if (!merchant) return res.status(404).json({ error: '商家不存在' });
+            const loginToken = Buffer.from(`${id}:${merchant.password}`).toString('base64');
+            const url = `/merchant.html?auto_token=${encodeURIComponent(loginToken)}`;
+            return res.status(200).json({ url });
+        }
 
         return res.status(404).json({ error: '接口不存在' });
     } catch (err) {
