@@ -87,7 +87,6 @@
                 <input type="text" id="productInput" placeholder="例如：山予海民宿">
                 <label for="extraNote">其他补充说明（可选）</label>
                 <textarea id="extraNote" rows="3" placeholder="例如：我们的特色是..."></textarea>
-                
                 <p style="margin-top:15px; font-weight:600;">📝 快捷生成风格（可自定义）</p>
                 <div id="styleList"></div>
                 <div class="btn-row" style="margin-top:10px;">
@@ -101,11 +100,8 @@
 
         <div class="card">
             <h2>🔑 修改密码</h2>
-            <label for="oldPassword">当前密码</label>
             <input type="password" id="oldPassword" placeholder="当前密码">
-            <label for="newPassword1">新密码</label>
             <input type="password" id="newPassword1" placeholder="新密码">
-            <label for="newPassword2">再次输入新密码</label>
             <input type="password" id="newPassword2" placeholder="再次输入新密码">
             <button onclick="changePassword()">✅ 修改密码</button>
             <p id="changePwdMsg" style="text-align:center; color:green;"></p>
