@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="/tubiao.png">
     <title>山予海AI·商家中心</title>
+    <link rel="icon" type="image/png" href="/tubiao.png">
     <style>
         body { font-family: 'PingFang SC','Microsoft YaHei',sans-serif; background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; flex-direction: column; }
         .card { 
@@ -62,28 +62,29 @@
     <div id="dashboard" class="hidden" style="width:100%; max-width:500px;">
         <div class="card">
             <span class="merchant-id-badge" id="merchantIdDisplay"></span>
-            <h2><img src="/logo.jpg" alt="logo" style="height: 1em; vertical-align: middle; margin-right: 8px;">商家中心</h2>
+            <h2><img src="/logo-qr.png" style="height: 1em; vertical-align: middle; margin-right: 8px;">山予海商家中心</h2>
             <div class="info">剩余算力：<strong id="balanceSpan"></strong></div>
             <p class="recharge-tip">💡 充值算力请联系管理员</p>
             <div class="btn-row">
                 <button onclick="showFlow('consume')">📊 算力明细</button>
                 <button onclick="showFlow('recharge')" class="recharge-btn">💰 充值记录</button>
-                <button onclick="showPricing()" class="pricing-btn">💎 算力价目表</button>
+                <button onclick="showPricing()" class="pricing-btn">💎 算力价目</button>
             </div>
-            <p style="margin-top:15px;">专属二维码（客人扫码生成好评，每次消耗2点算力）</p>
-<div style="position: relative; display: block; margin: 20px auto; text-align: center;">
-    <img id="qrImage" style="display: block; margin: 0 auto;" />
-    <img src="/logo.jpg" style="
-        position: absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        width: 40px; height: 40px;
-        border-radius: 8px;
-        box-shadow: 0 0 0 4px white;
-    " />
-</div>
+            <p style="margin-top:15px;">专属推广二维码（客人扫码生成好评，每次消耗2算力）</p>
+            <!-- 二维码居中+logo叠加 -->
+            <div style="position: relative; display: block; margin: 20px auto; text-align: center;">
+                <img id="qrImage" style="display: block; margin: 0 auto;" />
+                <img src="/logo.jpg" style="
+                    position: absolute;
+                    top: 50%; left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 40px; height: 40px;
+                    border-radius: 8px;
+                    box-shadow: 0 0 0 4px white;
+                " />
+            </div>
             <p style="text-align:center; color:#888; word-break:break-all;">链接: <span id="qrUrl"></span></p>
-            <button onclick="refreshQR()">刷新二维码（旧码失效）</button>
+            <button onclick="refreshQR()">🔄 刷新二维码（旧码失效）</button>
             <button onclick="logout()" style="background:#ccc;color:#333;">退出登录</button>
         </div>
 
@@ -133,18 +134,26 @@
         </div>
     </div>
 
+    <!-- 流水弹窗 -->
     <div id="flowModal" class="modal-overlay">
         <div class="modal-content">
             <h3 id="flowTitle">流水明细</h3>
-            <table><thead><tr><th>时间</th><th>类型</th><th>变动</th><th>余额</th><th>备注</th></tr></thead><tbody id="flowTableBody"></tbody></table>
+            <table>
+                <thead><tr><th>时间</th><th>类型</th><th>变动</th><th>余额</th><th>备注</th></tr></thead>
+                <tbody id="flowTableBody"></tbody>
+            </table>
             <button onclick="document.getElementById('flowModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
         </div>
     </div>
 
+    <!-- 价目表弹窗 -->
     <div id="pricingModal" class="modal-overlay">
         <div class="modal-content">
             <h3>💎 算力价目表</h3>
-            <table><thead><tr><th>算力数量</th><th>价格</th></tr></thead><tbody id="pricingTableBody"></tbody></table>
+            <table>
+                <thead><tr><th>算力数量</th><th>价格</th></tr></thead>
+                <tbody id="pricingTableBody"></tbody>
+            </table>
             <p id="pricingNote" style="text-align:center; color:#888; margin-top:10px;"></p>
             <button onclick="document.getElementById('pricingModal').style.display='none'" style="background:#ccc;color:#333;">关闭</button>
         </div>
@@ -316,18 +325,34 @@
             else alert('刷新失败：' + data.error);
         }
 
+        // ★ 修复后的 showFlow 函数：正确过滤充值与消耗记录
         async function showFlow(filterType) {
             const token = localStorage.getItem('merchant_token');
             const res = await fetch(`${API_BASE}/flow`, { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
             const tbody = document.getElementById('flowTableBody');
             tbody.innerHTML = '';
-            const filtered = filterType ? data.flows.filter(f => f.type === filterType) : data.flows;
+            let filtered = [];
+            if (filterType === 'recharge') {
+                // 充值记录：包含管理员充值、初始赠送、旧版充值
+                filtered = data.flows.filter(f => ['admin_add', 'recharge', 'initial'].includes(f.type));
+            } else if (filterType === 'consume') {
+                // 算力明细：包含生成消耗、管理员扣除
+                filtered = data.flows.filter(f => ['consume', 'admin_subtract'].includes(f.type));
+            } else {
+                filtered = data.flows;
+            }
             if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>'; }
             else {
                 filtered.forEach(f => {
                     const time = new Date(f.time).toLocaleString('zh-CN');
-                    const typeMap = { 'consume': '🔻消耗', 'recharge': '💰充值', 'initial': '🆕初始', 'admin_add': '➕管理员添加', 'admin_subtract': '➖管理员扣除' };
+                    const typeMap = { 
+                        'consume': '🔻消耗', 
+                        'recharge': '💰充值', 
+                        'initial': '🆕初始',
+                        'admin_add': '➕管理员添加',
+                        'admin_subtract': '➖管理员扣除' 
+                    };
                     const typeText = typeMap[f.type] || f.type;
                     const amount = (f.type === 'consume' || f.type === 'admin_subtract') ? `-${f.amount}` : `+${f.amount}`;
                     tbody.innerHTML += `<tr><td>${time}</td><td>${typeText}</td><td>${amount}</td><td>${f.balanceAfter}</td><td>${f.note || ''}</td></tr>`;
