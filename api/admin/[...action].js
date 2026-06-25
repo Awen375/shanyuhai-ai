@@ -106,7 +106,7 @@ export default async function handler(req, res) {
                         merchants.push({
                             id: key.replace('merchant:', ''),
                             name: m.name || '未命名商家',
-                            industry: settings.industry || '',   // 行业
+                            industry: settings.industry || '',
                             balance: m.balance || 0,
                             status: m.status || 'active',
                             password: m.password || '',
@@ -145,12 +145,9 @@ export default async function handler(req, res) {
                     const merchant = await redis.get(`merchant:${id}`);
                     if (!merchant) return res.status(404).json({ error: '商家不存在' });
 
-                    // 复制到新ID
                     await redis.set(`merchant:${newId}`, merchant);
-                    // 复制设置
                     const settings = await redis.get(`merchant:${id}:settings`);
                     if (settings) await redis.set(`merchant:${newId}:settings`, settings);
-                    // 删除旧ID
                     await redis.del(`merchant:${id}`);
                     await redis.del(`merchant:${id}:settings`);
 
@@ -174,6 +171,7 @@ export default async function handler(req, res) {
                     merchant.balance = newBalance;
                     await redis.set(`merchant:${id}`, merchant);
 
+                    // ★ 写入流水
                     await redis.set(`flow:${id}:${Date.now()}`, {
                         type: type === 'add' ? 'admin_add' : 'admin_subtract',
                         amount: Number(amount),
@@ -227,16 +225,19 @@ export default async function handler(req, res) {
         if (action === 'pricing') {
             if (!checkAdmin()) return;
             if (req.method === 'GET') {
-                const pricing = await redis.get('config:pricing') || {
-                    items: [
-                        { amount: 10, price: '¥1' },
-                        { amount: 50, price: '¥5' },
-                        { amount: 100, price: '¥9' },
-                        { amount: 200, price: '¥16' }
-                    ],
-                    note: '请联系管理员充值'
-                };
-                return res.status(200).json(pricing);
+                try {
+                    const raw = await redis.get('config:pricing');
+                    let pricing = raw;
+                    if (typeof raw === 'string') {
+                        pricing = JSON.parse(raw);
+                    }
+                    if (!pricing || !Array.isArray(pricing.items)) {
+                        pricing = { items: [], note: '' };
+                    }
+                    return res.status(200).json(pricing);
+                } catch (e) {
+                    return res.status(200).json({ items: [], note: '' });
+                }
             }
             if (req.method === 'POST') {
                 const { items, note } = req.body;
