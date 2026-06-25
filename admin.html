@@ -208,7 +208,7 @@
 
         // ---------- 商家列表（含行业列）----------
         async function loadMerchants() {
-            const res = await fetch('/api/admin/merchants', { headers: { 'x-admin-token': token() } });
+            const res = await fetch('/wenan/api/admin/merchants', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
             const tbody = document.querySelector('#merchantTable tbody');
             tbody.innerHTML = '';
@@ -246,7 +246,7 @@
             const password = document.getElementById('newMerchantPass').value;
             const balance = parseInt(document.getElementById('newMerchantBalance').value) || 100;
             if (!id || !password) return alert('ID和密码必填');
-            await fetch('/api/admin/merchants', {
+            await fetch('/wenan/api/admin/merchants', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
             body: JSON.stringify({ id, amount: amount, type: type, balance: newBalance, note: note })
             });
@@ -310,7 +310,7 @@
 
         async function deleteMerchant(id) {
             if (!confirm('确定删除商家 ' + id + '？此操作不可恢复。')) return;
-            await fetch('/api/admin/merchants', {
+            await fetch('/wenan/api/admin/merchants', {
                 method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id })
             });
@@ -319,7 +319,7 @@
 
         async function toggleBan(id, ban) {
             if (!confirm(`确定${ban ? '封号' : '解封'}商家 ${id} 吗？`)) return;
-            await fetch('/api/admin/merchants', {
+            await fetch('/wenan/api/admin/merchants', {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id, status: ban ? 'banned' : 'active' })
             });
@@ -354,7 +354,7 @@
             const start = document.getElementById('statStart').value;
             const end = document.getElementById('statEnd').value;
             if (!start || !end) return alert('请选择起止日期');
-            const res = await fetch(`/api/admin/merchants?action=stats&merchant=${merchantId}&start=${start}&end=${end}`, {
+            const res = await fetch(`/wenan/api/admin/merchants?action=stats&merchant=${merchantId}&start=${start}&end=${end}`, {
                 headers: { 'x-admin-token': token() }
             });
             const data = await res.json();
@@ -376,7 +376,7 @@
         async function loadRecords() {
             const tbody = document.querySelector('#recordsTable tbody');
             tbody.innerHTML = '<tr><td colspan="5">加载中...</td></tr>';
-            const res = await fetch('/api/admin/logs', { headers: { 'x-admin-token': token() } });
+            const res = await fetch('/wenan/api/admin/logs', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
             if (!res.ok) { tbody.innerHTML = `<tr><td colspan="5">错误: ${data.error}</td></tr>`; return; }
             tbody.innerHTML = '';
@@ -389,7 +389,7 @@
 
         // ---------- 联系方式 ----------
         async function loadContact() {
-            const res = await fetch('/api/admin/contact');
+            const res = await fetch('/wenan/api/admin/contact');
             const data = await res.json();
             document.getElementById('contactQrcode').value = data.qrcode_url || '';
             document.getElementById('contactPhone').value = data.phone || '';
@@ -410,7 +410,7 @@
 
         // ---------- 价目表 ----------
         async function loadPricing() {
-            const res = await fetch('/api/admin/pricing', { headers: { 'x-admin-token': token() } });
+            const res = await fetch('/wenan/api/admin/pricing', { headers: { 'x-admin-token': token() } });
             const data = await res.json();
             let pricing = data;
             if (data && data.value && typeof data.value === 'string') {
@@ -450,7 +450,7 @@
                 if (amount && price) items.push({ amount, price });
             });
             const note = document.getElementById('pricingNoteInput').value.trim();
-            await fetch('/api/admin/pricing', {
+            await fetch('/wenan/api/admin/pricing', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ items, note })
             });
@@ -461,7 +461,7 @@
         async function showDetail(id) {
             currentDetailId = id;
             document.getElementById('detailMerchantId').innerText = id;
-            const res = await fetch(`/api/admin/merchants?action=detail&id=${id}`, {
+            const res = await fetch(`/wenan/api/admin/merchants?action=detail&id=${id}`, {
                 headers: { 'x-admin-token': token() }
             });
             const data = await res.json();
@@ -487,7 +487,7 @@
             const newId = document.getElementById('newMerchantIdInput').value.trim();
             if (!newId) return alert('请输入新ID');
             if (newId === currentDetailId) return alert('新ID与当前ID相同');
-            const res = await fetch('/api/admin/merchants', {
+            const res = await fetch('/wenan/api/admin/merchants', {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id: currentDetailId, newId })
             });
@@ -504,7 +504,7 @@
         async function changeMerchantPassword() {
             const newPass = document.getElementById('newMerchantPassword').value.trim();
             if (!newPass) return alert('请输入新密码');
-            await fetch('/api/admin/merchants', {
+            await fetch('/wenan/api/admin/merchants', {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id: currentDetailId, password: newPass })
             });
@@ -518,7 +518,7 @@
         }
 
         async function loginAsMerchant() {
-            const res = await fetch('/api/admin/login-as-merchant', {
+            const res = await fetch('/wenan/api/admin/login-as-merchant', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
                 body: JSON.stringify({ id: currentDetailId })
             });
