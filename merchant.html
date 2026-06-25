@@ -376,7 +376,7 @@
 
         async function openContact() {
             document.getElementById('contactModal').style.display = 'flex';
-            const res = await fetch('/api/admin/contact');
+            const res = await fetch('/wenan/api/admin/contact');
             const data = await res.json();
             const qrImg = document.getElementById('contactQrImage');
             if (data.qrcode_url) { qrImg.src = data.qrcode_url; document.getElementById('contactQrContainer').style.display = ''; }
