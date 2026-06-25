@@ -260,15 +260,43 @@
             document.getElementById('rechargeModal').style.display = 'flex';
         }
 
-        async function submitRecharge() {
+                async function submitRecharge() {
             const id = document.getElementById('rechargeMerchantId').value;
             const amount = parseInt(document.getElementById('rechargeAmount').value);
             const type = document.getElementById('rechargeType').value;
             const note = document.getElementById('rechargeNote').value.trim();
             if (!amount || amount <= 0) return alert('请输入有效金额');
-            const res = await fetch('/api/admin/merchants', {
+
+            // 先从列表或 Redis 中获取商家当前余额
+            let currentBalance = 0;
+            try {
+                const infoRes = await fetch(`/wenan/api/admin/merchants?action=detail&id=${id}`, {
+                    headers: { 'x-admin-token': token() }
+                });
+                const infoData = await infoRes.json();
+                currentBalance = infoData.balance || 0;
+            } catch(e) {
+                // 获取失败，从 DOM 中读取（表格中的余额列）
+                const rows = document.querySelectorAll('#merchantTable tbody tr');
+                for (const row of rows) {
+                    if (row.cells[0].innerText === id) {
+                        currentBalance = parseInt(row.cells[3].innerText) || 0;
+                        break;
+                    }
+                }
+            }
+
+            // 计算新余额
+            let newBalance;
+            if (type === 'add') {
+                newBalance = currentBalance + amount;
+            } else {
+                newBalance = Math.max(0, currentBalance - amount);
+            }
+
+            const res = await fetch('/wenan/api/admin/merchants', {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
-                body: JSON.stringify({ id, amount, type, note })
+                body: JSON.stringify({ id, balance: newBalance })
             });
             const data = await res.json();
             if (data.success) {
