@@ -416,7 +416,7 @@
             if (data && data.value && typeof data.value === 'string') {
                 try { pricing = JSON.parse(data.value); } catch(e) {}
             }
-            if (!pricing || !Array.isArray(pricing.items)) {
+            if (!pricing || !pricing.items || !Array.isArray(pricing.items)) {
                 pricing = { items: [], note: '' };
             }
             const container = document.getElementById('pricingItemsContainer');
