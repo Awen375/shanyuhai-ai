@@ -248,7 +248,7 @@
             if (!id || !password) return alert('ID和密码必填');
             await fetch('/api/admin/merchants', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
-                body: JSON.stringify({ id, name, password, balance })
+            body: JSON.stringify({ id, amount: amount, type: type, balance: newBalance, note: note })
             });
             await loadMerchants();
         }
