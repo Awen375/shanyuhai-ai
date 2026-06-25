@@ -364,7 +364,7 @@
         }
 
         async function showPricing() {
-            const res = await fetch('/api/merchant/pricing');
+            const res = await fetch('/wenan/api/admin/pricing', { headers: { 'x-admin-token': 'zjm1314520' } });
             const data = await res.json();
             const tbody = document.getElementById('pricingTableBody');
             tbody.innerHTML = data.items.map(item => `<tr><td>${item.amount} 算力</td><td>${item.price}</td></tr>`).join('');
