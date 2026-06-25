@@ -339,7 +339,7 @@
                 filtered = data.flows.filter(f => ['admin_add', 'recharge', 'initial'].includes(f.type));
             } else if (filterType === 'consume') {
                 // 算力明细：包含生成消耗、管理员扣除
-                filtered = data.flows.filter(f => ['consume', 'admin_subtract'].includes(f.type));
+                filtered = data.flows.filter(f => ['消耗', 'consume', 'admin_subtract'].includes(f.type));
             } else {
                 filtered = data.flows;
             }
