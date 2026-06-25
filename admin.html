@@ -248,7 +248,7 @@
             if (!id || !password) return alert('ID和密码必填');
             await fetch('/wenan/api/admin/merchants', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
-            body: JSON.stringify({ id, amount: amount, type: type, balance: newBalance, note: note })
+                        body: JSON.stringify({ id, name, password, balance })
             });
             await loadMerchants();
         }
