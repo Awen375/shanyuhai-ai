@@ -120,6 +120,9 @@ export default async function handler(req, res) {
     const merchant = await redis.get(`merchant:${merchantId}`);
     if (!merchant) return res.status(400).json({ error: '无效商家' });
     if (merchant.status === 'banned') return res.status(403).json({ error: '该商家已被封禁' });
+    if (!qrToken) {
+    return res.status(400).json({ error: '无效访问，请通过商家二维码进入' });
+}
     if (merchant.token_val && merchant.token_val !== qrToken) {
         return res.status(400).json({ error: '二维码已失效，请获取最新二维码' });
     }
