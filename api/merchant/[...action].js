@@ -19,13 +19,14 @@ export default async function handler(req, res) {
             if (!merchant) return res.status(401).json({ error: '账号或密码错误' });
             if (merchant.password !== password) return res.status(401).json({ error: '账号或密码错误' });
 
-            if (!merchant.token_val) {
-                merchant.token_val = `${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
-                await redis.set(`merchant:${id}`, merchant);
-            }
-            const token = Buffer.from(`${id}:${password}`).toString('base64');
-            return res.status(200).json({ token, name: merchant.name, balance: merchant.balance, token_val: merchant.token_val });
-        }
+// 仅在没有任何 token 时自动生成一个初始 token（每个商家一生一次）
+if (!merchant.token_val) {
+    merchant.token_val = `${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
+    await redis.set(`merchant:${id}`, merchant);
+}
+// 直接返回已有 token，不会重复生成
+const token = Buffer.from(`${id}:${password}`).toString('base64');
+return res.status(200).json({ token, name: merchant.name, balance: merchant.balance, token_val: merchant.token_val });
 
         // 信息
         if (action === 'info') {
