@@ -294,6 +294,7 @@
             });
             const data = await res.json();
             document.getElementById('settingsMsg').innerText = data.success ? '✅ 设置已保存' : '❌ 保存失败：' + (data.error || '未知错误');
+            if (data.success) loadSettings();
         }
 
         async function changePassword() {
