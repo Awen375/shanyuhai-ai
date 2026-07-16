@@ -238,7 +238,7 @@
             }
         }
 
-                async function loadSettings() {
+        async function loadSettings() {
             const token = localStorage.getItem('merchant_token');
             const res = await fetch(`${API_BASE}/info`, { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
