@@ -229,7 +229,7 @@
                 document.getElementById('merchantIdDisplay').innerText = `商家ID：${data.id}`;
                 document.getElementById('balanceSpan').innerText = data.balance;
                 const tokenVal = data.token_val || '';
-                const url = `https://shanyh.me/wenan/index.html?merchant=${data.id}&token=${tokenVal}`;
+                const url = `https://www.shanyh.top?merchant=${data.id}&token=${tokenVal}`;
                 document.getElementById('qrUrl').innerText = url;
                 document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
             } else {
