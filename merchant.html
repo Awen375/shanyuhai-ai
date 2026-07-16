@@ -238,24 +238,23 @@
             }
         }
 
-        async function loadSettings() {
+                async function loadSettings() {
             const token = localStorage.getItem('merchant_token');
             const res = await fetch(`${API_BASE}/info`, { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
-            if (data.settings) {
-                document.getElementById('industryInput').value = data.settings.industry || '';
-                document.getElementById('keywordsInput').value = data.settings.keywords || '';
-                document.getElementById('productInput').value = data.settings.product || '';
-                document.getElementById('locationInput').value = data.settings.location || '';
-                document.getElementById('extraNote').value = data.settings.extraNote || '';
-                currentStyles = data.settings.styles || [];
-                renderStyles();
-            } else {
-                currentStyles = [];
-                renderStyles();
+            // 兼容 settings 是字符串的情况
+            let settings = data.settings || {};
+            if (typeof settings === 'string') {
+                try { settings = JSON.parse(settings); } catch(e) { settings = {}; }
             }
+            document.getElementById('industryInput').value = settings.industry || '';
+            document.getElementById('keywordsInput').value = settings.keywords || '';
+            document.getElementById('productInput').value = settings.product || '';
+            document.getElementById('locationInput').value = settings.location || '';
+            document.getElementById('extraNote').value = settings.extraNote || '';
+            currentStyles = settings.styles || [];
+            renderStyles();
         }
-
         function renderStyles() {
             const container = document.getElementById('styleList');
             container.innerHTML = '';
