@@ -267,7 +267,7 @@
         async function openContact() {
             document.getElementById('contactModal').style.display = 'flex';
             try {
-                const res = await fetch('/api/admin/contact');
+                const res = await fetch('/wenan/api/admin/contact');
                 const data = await res.json();
                 const qrImg = document.getElementById('contactQrImage');
                 if (data.qrcode_url) {
@@ -301,7 +301,7 @@
             resultBox.innerText = '⏳ 山予海正在为您书写...';
             copyBtn.classList.remove('show');
             try {
-                const res = await fetch('/api/generate', {
+                const res = await fetch('/wenan/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
