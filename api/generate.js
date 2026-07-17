@@ -1,9 +1,5 @@
-import { Redis } from '@upstash/redis';
-
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL,
-  token: process.env.KV_REST_API_TOKEN,
-});
+import Redis from 'ioredis';
+const redis = new Redis('redis://:Cjw1314520%40@127.0.0.1:6379');
 
 const defaultStyleGuides = {
     "情绪共鸣型": "你是一个感情细腻的真实游客，用第一人称讲述亲身经历，着重描述内心的感动与共鸣，让读者感同身受。",
