@@ -1,9 +1,5 @@
-import { Redis } from '@upstash/redis';
-
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL,
-  token: process.env.KV_REST_API_TOKEN,
-});
+import Redis from 'ioredis';
+const redis = new Redis('redis://:Cjw1314520%40@127.0.0.1:6379');
 
 export default async function handler(req, res) {
     try {
