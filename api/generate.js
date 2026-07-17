@@ -113,7 +113,14 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: '请通过商家二维码访问' });
     }
 
-    const merchant = await redis.get(`merchant:${merchantId}`);
+    const merchantRaw = await redis.get(`merchant:${merchantId}`);
+    let merchant;
+    try {
+        merchant = merchantRaw ? (typeof merchantRaw === 'string' ? JSON.parse(merchantRaw) : merchantRaw) : null;
+    } catch (e) {
+        console.error('Merchant JSON error:', merchantRaw);
+        return res.status(500).json({ error: '商户数据异常，请联系管理员' });
+    }
     if (!merchant) return res.status(400).json({ error: '无效商家' });
     if (merchant.status === 'banned') return res.status(403).json({ error: '该商家已被封禁' });
     if (!qrToken) {
@@ -124,7 +131,14 @@ export default async function handler(req, res) {
     }
     if (merchant.balance < 2) return res.status(402).json({ error: '商家算力不足，请充值后再试' });
 
-    const settings = await redis.get(`merchant:${merchantId}:settings`) || {};
+    const settingsRaw = await redis.get(`merchant:${merchantId}:settings`);
+    let settings;
+    try {
+        settings = settingsRaw ? (typeof settingsRaw === 'string' ? JSON.parse(settingsRaw) : settingsRaw) : {};
+    } catch (e) {
+        console.error('Settings JSON error:', settingsRaw);
+        settings = {};
+    }
 
     if (!settings.industry && !settings.product) {
         return res.status(400).json({ error: '该商家尚未设置行业和产品信息，请联系商家完善' });
