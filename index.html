@@ -200,7 +200,7 @@
 
         async function loadStyles(merchant) {
             try {
-                const res = await fetch(`/api/merchant/styles?merchant=${merchant}`);
+                const res = await fetch(`/wenan/api/merchant/styles?merchant=${merchant}`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.styles && data.styles.length > 0) {
